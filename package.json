@@ -1,0 +1,24 @@
+{
+  "name": "tiwari-jewellers",
+  "version": "1.0.0",
+  "description": "TIWARI JWELLERS – Premium Luxury Jewellery E-Commerce Website",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"magenta,cyan\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/server.js",
+    "dev:client": "npm.cmd --prefix client run dev",
+    "start": "node server/server.js"
+  },
+  "keywords": [
+    "jewellery",
+    "ecommerce",
+    "luxury",
+    "gold",
+    "diamonds",
+    "silver"
+  ],
+  "author": "TIWARI JWELLERS",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
