@@ -40,3 +40,4 @@ export function apiFetch(input, init) {
 }
 
 export default getApiUrl;
+

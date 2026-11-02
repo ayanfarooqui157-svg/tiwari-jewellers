@@ -59,9 +59,9 @@ export const AuthModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <div 
-        className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-ivory-300 relative animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-ivory-300 relative animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

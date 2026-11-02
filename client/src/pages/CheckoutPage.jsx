@@ -334,13 +334,13 @@ export const CheckoutPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleInitiateOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <form onSubmit={handleInitiateOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
           
           {/* LEFT: SHIPPING & PAYMENT FORMS (7 COLS) */}
           <div className="lg:col-span-7 space-y-6">
             
             {/* 1. Contact Information */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-ivory-300 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-ivory-300 shadow-sm">
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-ivory-200">
                 <User className="w-4 h-4 text-burgundy" />
                 <h3 className="font-serif font-bold text-base text-burgundy">
@@ -391,7 +391,7 @@ export const CheckoutPage = () => {
             </div>
 
             {/* 2. Delivery Address */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-ivory-300 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-ivory-300 shadow-sm">
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-ivory-200">
                 <MapPin className="w-4 h-4 text-burgundy" />
                 <h3 className="font-serif font-bold text-base text-burgundy">
@@ -460,7 +460,7 @@ export const CheckoutPage = () => {
             </div>
 
             {/* 3. Payment Method: Cash on Delivery (COD Only) */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-ivory-300 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-ivory-300 shadow-sm">
               <div className="flex items-center gap-2 mb-4 pb-3 border-b border-ivory-200">
                 <Lock className="w-4 h-4 text-burgundy" />
                 <h3 className="font-serif font-bold text-base text-burgundy">
@@ -512,7 +512,7 @@ export const CheckoutPage = () => {
 
           {/* RIGHT: ORDER SUMMARY (5 COLS) */}
           <div className="lg:col-span-5">
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-ivory-300 shadow-sm sticky top-28 space-y-6">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-ivory-300 shadow-sm sticky top-28 space-y-6">
               
               <h3 className="font-serif font-bold text-lg text-burgundy pb-3 border-b border-ivory-200">
                 Order Summary ({cart.reduce((s, i) => s + i.quantity, 0)} Items)

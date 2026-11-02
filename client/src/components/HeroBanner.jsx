@@ -50,36 +50,36 @@ export const HeroBanner = () => {
             className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000 ease-out"
           />
           {/* Multi-layered luxury gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-burgundy-900/95 via-burgundy-900/75 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-burgundy-900 via-transparent to-black/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-burgundy-950 via-burgundy-900/85 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-burgundy-950/80"></div>
         </div>
 
         {/* Content Container */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-28">
           <div className="max-w-2xl">
             {/* Royal Tag Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold/20 border border-gold/40 backdrop-blur-md mb-6 animate-in fade-in slide-in-from-bottom-2">
-              <Sparkles className="w-3.5 h-3.5 text-gold-300" />
-              <span className="text-[11px] font-sans font-semibold tracking-widest text-gold-200 uppercase">
+            <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-gold/20 border border-gold/40 backdrop-blur-md mb-4 sm:mb-6 animate-in fade-in slide-in-from-bottom-2">
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold-300" />
+              <span className="text-[10px] sm:text-[11px] font-sans font-semibold tracking-widest text-gold-200 uppercase">
                 {slide.tag}
               </span>
             </div>
 
             {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-ivory tracking-tight leading-[1.15] mb-6 whitespace-pre-line drop-shadow-md">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-serif font-bold text-ivory tracking-tight leading-[1.2] sm:leading-[1.15] mb-4 sm:mb-6 whitespace-pre-line drop-shadow-md">
               {slide.title}
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-ivory/85 font-sans font-light leading-relaxed mb-8 max-w-xl">
+            <p className="text-sm sm:text-lg text-ivory/85 font-sans font-light leading-relaxed mb-6 sm:mb-8 max-w-xl">
               {slide.subtitle}
             </p>
 
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <button
                 onClick={() => navigateToCategory('all')}
-                className="px-8 py-4 bg-gold hover:bg-gold-600 text-burgundy-950 font-sans font-semibold text-xs uppercase tracking-widest rounded-full transition-all duration-300 shadow-lg hover:shadow-gold/30 hover:scale-[1.02] flex items-center justify-center gap-2 group"
+                className="px-6 sm:px-8 py-3.5 sm:py-4 bg-gold hover:bg-gold-600 text-burgundy-950 font-sans font-semibold text-xs uppercase tracking-widest rounded-full transition-all duration-300 shadow-lg hover:shadow-gold/30 hover:scale-[1.02] flex items-center justify-center gap-2 group"
               >
                 <span>{slide.ctaPrimary}</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -87,7 +87,7 @@ export const HeroBanner = () => {
 
               <button
                 onClick={() => navigateToCategory('all')}
-                className="px-8 py-4 bg-white/10 hover:bg-white/20 text-ivory border border-gold/40 hover:border-gold font-sans font-semibold text-xs uppercase tracking-widest rounded-full backdrop-blur-sm transition-all duration-300 flex items-center justify-center"
+                className="px-6 sm:px-8 py-3.5 sm:py-4 bg-white/10 hover:bg-white/20 text-ivory border border-gold/40 hover:border-gold font-sans font-semibold text-xs uppercase tracking-widest rounded-full backdrop-blur-sm transition-all duration-300 flex items-center justify-center"
               >
                 {slide.ctaSecondary}
               </button>
@@ -117,46 +117,46 @@ export const HeroBanner = () => {
       </div>
 
       {/* Trust Badges Bar below Hero */}
-      <div className="bg-white border-y border-ivory-300/80 py-5 text-charcoal">
+      <div className="bg-white border-y border-ivory-300/80 py-4 sm:py-5 text-charcoal">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-burgundy/10 flex items-center justify-center shrink-0">
-                <Shield className="w-5 h-5 text-burgundy" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-burgundy/10 flex items-center justify-center shrink-0">
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-burgundy" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">100% BIS Hallmarked</h4>
-                <p className="text-[11px] text-charcoal-400">Government Certified Purity</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-charcoal uppercase tracking-wider">100% BIS Hallmarked</h4>
+                <p className="text-[10px] sm:text-[11px] text-charcoal-400">Government Certified Purity</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center shrink-0">
-                <Award className="w-5 h-5 text-gold-700" />
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gold/15 flex items-center justify-center shrink-0">
+                <Award className="w-4 h-4 sm:w-5 sm:h-5 text-gold-700" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">IGI Certified Diamonds</h4>
-                <p className="text-[11px] text-charcoal-400">Natural & Conflict-Free</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-charcoal uppercase tracking-wider">IGI Certified Diamonds</h4>
+                <p className="text-[10px] sm:text-[11px] text-charcoal-400">Natural & Conflict-Free</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-burgundy/10 flex items-center justify-center shrink-0">
-                <Truck className="w-5 h-5 text-burgundy" />
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-burgundy/10 flex items-center justify-center shrink-0">
+                <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-burgundy" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Insured Fast Delivery</h4>
-                <p className="text-[11px] text-charcoal-400">Pan-India Tamper-Proof Vault</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-charcoal uppercase tracking-wider">Insured Fast Delivery</h4>
+                <p className="text-[10px] sm:text-[11px] text-charcoal-400">Pan-India Tamper-Proof Vault</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gold/15 flex items-center justify-center shrink-0">
-                <RefreshCw className="w-5 h-5 text-gold-700" />
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gold/15 flex items-center justify-center shrink-0">
+                <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 text-gold-700" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Lifetime Exchange</h4>
-                <p className="text-[11px] text-charcoal-400">15-Day Hassle-Free Returns</p>
+                <h4 className="text-[11px] sm:text-xs font-bold text-charcoal uppercase tracking-wider">Lifetime Exchange</h4>
+                <p className="text-[10px] sm:text-[11px] text-charcoal-400">15-Day Hassle-Free Returns</p>
               </div>
             </div>
           </div>

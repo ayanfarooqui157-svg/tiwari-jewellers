@@ -111,34 +111,34 @@ export const ProductCard = ({ product }) => {
       </div>
 
       {/* 2. CARD BODY */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+      <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between">
         <div>
           {/* Metal & Purity Tag */}
-          <div className="flex items-center justify-between text-[11px] text-charcoal-400 mb-1.5 font-medium">
-            <span className="text-gold-700 tracking-wide uppercase font-semibold">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-charcoal-400 mb-1 sm:mb-1.5 font-medium">
+            <span className="text-gold-700 tracking-wide uppercase font-semibold truncate max-w-[65%]">
               {product.metal}
             </span>
-            <div className="flex items-center gap-1 text-gold-600">
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <span className="font-bold text-charcoal-700 text-xs">{product.rating}</span>
-              <span className="text-charcoal-400 text-[10px]">({product.reviewCount})</span>
+            <div className="flex items-center gap-1 text-gold-600 shrink-0">
+              <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
+              <span className="font-bold text-charcoal-700 text-[11px] sm:text-xs">{product.rating}</span>
+              <span className="text-charcoal-400 text-[9px] sm:text-[10px]">({product.reviewCount})</span>
             </div>
           </div>
 
           {/* Product Title */}
-          <h3 className="font-serif text-sm sm:text-base font-bold text-charcoal group-hover:text-burgundy transition-colors line-clamp-1 mb-2">
+          <h3 className="font-serif text-xs sm:text-base font-bold text-charcoal group-hover:text-burgundy transition-colors line-clamp-1 sm:line-clamp-2 mb-1 sm:mb-2">
             {product.name}
           </h3>
         </div>
 
         {/* Pricing & Add to Cart Action */}
-        <div className="mt-3 pt-3 border-t border-ivory-200">
-          <div className="flex items-baseline gap-2 mb-3">
-            <span className="font-serif text-base sm:text-lg font-bold text-burgundy">
+        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-ivory-200">
+          <div className="flex items-baseline gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+            <span className="font-serif text-sm sm:text-lg font-bold text-burgundy">
               {formatPrice(product.price)}
             </span>
             {product.originalPrice > product.price && (
-              <span className="text-xs text-charcoal-400 line-through">
+              <span className="text-[10px] sm:text-xs text-charcoal-400 line-through">
                 {formatPrice(product.originalPrice)}
               </span>
             )}
@@ -147,7 +147,7 @@ export const ProductCard = ({ product }) => {
           {/* Quick Add To Bag Button */}
           <button
             onClick={handleQuickAdd}
-            className={`w-full py-2.5 px-3 rounded-xl font-sans text-xs font-semibold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 ${
+            className={`w-full py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl font-sans text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${
               justAdded
                 ? 'bg-emerald-700 text-white'
                 : 'bg-ivory-200 hover:bg-burgundy text-burgundy-900 hover:text-white border border-ivory-300'
@@ -155,11 +155,12 @@ export const ProductCard = ({ product }) => {
           >
             {justAdded ? (
               <>
-                <Check className="w-4 h-4" /> Added to Bag
+                <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Added
               </>
             ) : (
               <>
-                <ShoppingBag className="w-3.5 h-3.5 text-gold-600 group-hover:text-gold-200" /> Add to Cart
+                <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gold-600 group-hover:text-gold-200" />
+                <span>Add to Cart</span>
               </>
             )}
           </button>

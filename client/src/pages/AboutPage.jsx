@@ -23,7 +23,7 @@ export const AboutPage = () => {
         </div>
 
         {/* Narrative Section with Image */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20 bg-white rounded-3xl p-8 sm:p-12 border border-ivory-300 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-12 sm:mb-20 bg-white rounded-3xl p-5 sm:p-12 border border-ivory-300 shadow-sm">
           <div className="space-y-4 text-xs sm:text-sm text-charcoal-600 leading-relaxed font-sans">
             <span className="text-xs uppercase font-bold tracking-wider text-burgundy">The Tiwari Legacy</span>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-charcoal">

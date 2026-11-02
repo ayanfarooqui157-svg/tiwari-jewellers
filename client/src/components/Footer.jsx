@@ -42,13 +42,13 @@ export const Footer = () => {
     <footer className="bg-charcoal text-ivory/80 pt-16 pb-12 border-t-2 border-gold/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-ivory/10">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-12 border-b border-ivory/10">
           
-          {/* Brand Info (2 cols wide on desktop) */}
-          <div className="lg:col-span-2 space-y-4">
+          {/* Brand Info (2 cols wide on desktop & mobile) */}
+          <div className="col-span-2 lg:col-span-2 space-y-4">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigateTo('home')}>
               <span className="w-2.5 h-2.5 bg-gold rounded-full rotate-45" />
-              <h2 className="text-2xl font-serif font-bold tracking-widest text-white uppercase">
+              <h2 className="text-xl sm:text-2xl font-serif font-bold tracking-widest text-white uppercase">
                 TIWARI JWELLERS
               </h2>
             </div>
@@ -154,7 +154,7 @@ export const Footer = () => {
           </div>
 
           {/* Boutiques & Direct Line */}
-          <div>
+          <div className="col-span-2 md:col-span-1 lg:col-span-1">
             <h3 className="text-xs font-serif font-bold text-white tracking-widest uppercase mb-4 text-gold">
               Flagship Boutiques
             </h3>

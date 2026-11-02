@@ -176,22 +176,22 @@ export const ProductDetailPage = () => {
   };
 
   return (
-    <div className="bg-ivory min-h-screen py-8">
+    <div className="bg-ivory min-h-screen py-6 sm:py-8 pb-24 lg:pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-xs text-charcoal-400 mb-6 font-sans">
-          <button onClick={() => navigateTo('home')} className="hover:text-burgundy transition-colors">Home</button>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <button onClick={() => navigateTo('shop')} className="hover:text-burgundy transition-colors">Jewellery</button>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-charcoal-600">{product.category}</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-burgundy font-semibold truncate max-w-[200px]">{product.name}</span>
+        <nav className="flex items-center gap-2 text-xs text-charcoal-400 mb-4 sm:mb-6 font-sans overflow-x-auto whitespace-nowrap pb-1">
+          <button onClick={() => navigateTo('home')} className="hover:text-burgundy transition-colors shrink-0">Home</button>
+          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+          <button onClick={() => navigateTo('shop')} className="hover:text-burgundy transition-colors shrink-0">Jewellery</button>
+          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-charcoal-600 shrink-0">{product.category}</span>
+          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+          <span className="text-burgundy font-semibold truncate max-w-[150px] sm:max-w-[200px]">{product.name}</span>
         </nav>
 
         {/* MAIN PRODUCT DETAIL GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 bg-white rounded-3xl p-6 sm:p-10 border border-ivory-300 shadow-sm mb-14">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 bg-white rounded-3xl p-4 sm:p-8 lg:p-10 border border-ivory-300 shadow-sm mb-10 sm:mb-14">
           
           {/* LEFT: GALLERY (7 COLS) */}
           <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4">
@@ -692,7 +692,7 @@ export const ProductDetailPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
               {relatedProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
@@ -817,6 +817,34 @@ export const ProductDetailPage = () => {
           </div>
         </div>
       )}
+
+      {/* MOBILE-ONLY STICKY BOTTOM ACTION BAR */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-ivory-300 p-3 px-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] text-charcoal-500 uppercase tracking-wider block">Total Price</span>
+          <span className="text-base font-serif font-bold text-burgundy">{formatPrice(product.price)}</span>
+        </div>
+        <div className="flex items-center gap-2 flex-1 max-w-[240px]">
+          <button
+            onClick={handleAddToCart}
+            className={`flex-1 py-2.5 px-3 rounded-xl font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 shadow transition-all ${
+              justAdded
+                ? 'bg-emerald-700 text-white'
+                : 'bg-burgundy hover:bg-burgundy-600 text-gold-200'
+            }`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-gold-200" />
+            <span>{justAdded ? 'Added' : 'Add to Bag'}</span>
+          </button>
+          <button
+            onClick={handleBuyNow}
+            className="flex-1 py-2.5 px-3 rounded-xl bg-gold hover:bg-gold-600 text-burgundy-950 font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 shadow transition-all"
+          >
+            <Zap className="w-3.5 h-3.5 fill-current text-burgundy-900" />
+            <span>Buy Now</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

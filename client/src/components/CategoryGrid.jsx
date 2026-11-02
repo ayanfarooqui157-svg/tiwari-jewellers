@@ -74,10 +74,10 @@ export const CategoryGrid = () => {
   ];
 
   return (
-    <section className="py-20 bg-ivory">
+    <section className="py-12 sm:py-20 bg-ivory">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto mb-14">
+        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
           <div className="inline-flex items-center gap-2 mb-2">
             <span className="w-6 h-[1px] bg-gold" />
             <span className="text-xs uppercase font-semibold tracking-widest text-gold-700">
@@ -85,16 +85,16 @@ export const CategoryGrid = () => {
             </span>
             <span className="w-6 h-[1px] bg-gold" />
           </div>
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold text-burgundy mb-3">
+          <h2 className="text-2xl sm:text-4xl font-serif font-bold text-burgundy mb-2 sm:mb-3">
             Shop By Category
           </h2>
-          <p className="text-sm text-charcoal-500 font-sans">
+          <p className="text-xs sm:text-sm text-charcoal-500 font-sans">
             Explore masterpieces crafted with uncompromised precision, pure gold and certified diamonds.
           </p>
         </div>
 
         {/* Categories Grid (8 Cards) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
           {displayCategories.map((category) => (
             <div
               key={category.id}

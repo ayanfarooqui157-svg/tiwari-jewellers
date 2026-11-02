@@ -24,9 +24,9 @@ export const HomePage = () => {
       <CategoryGrid />
 
       {/* 3. BESTSELLING COLLECTION */}
-      <section className="py-20 bg-white border-t border-ivory-200">
+      <section className="py-12 sm:py-20 bg-white border-t border-ivory-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12">
             <div>
               <div className="inline-flex items-center gap-2 mb-2">
                 <span className="w-6 h-[1px] bg-gold" />
@@ -34,24 +34,24 @@ export const HomePage = () => {
                   Most Coveted
                 </span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-burgundy">
+              <h2 className="text-2xl sm:text-4xl font-serif font-bold text-burgundy">
                 Bestselling Masterpieces
               </h2>
-              <p className="text-sm text-charcoal-500 font-sans mt-2">
+              <p className="text-xs sm:text-sm text-charcoal-500 font-sans mt-1 sm:mt-2">
                 Pieces celebrated for their ethereal design, unmatched luster and daily luxury.
               </p>
             </div>
 
             <button
               onClick={() => navigateToCategory('all')}
-              className="mt-4 md:mt-0 inline-flex items-center gap-1.5 text-xs uppercase font-bold tracking-widest text-burgundy hover:text-burgundy-700 pb-1 border-b border-burgundy hover:border-gold transition-colors"
+              className="mt-3 md:mt-0 inline-flex items-center gap-1.5 text-xs uppercase font-bold tracking-widest text-burgundy hover:text-burgundy-700 pb-1 border-b border-burgundy hover:border-gold transition-colors self-start md:self-auto"
             >
               <span>View All Bestsellers</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {bestsellers.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -63,9 +63,9 @@ export const HomePage = () => {
       <PromotionalBanner />
 
       {/* 5. NEW ARRIVALS */}
-      <section className="py-20 bg-ivory">
+      <section className="py-12 sm:py-20 bg-ivory">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 sm:mb-12">
             <div>
               <div className="inline-flex items-center gap-2 mb-2">
                 <span className="w-6 h-[1px] bg-gold" />
@@ -73,24 +73,24 @@ export const HomePage = () => {
                   Fresh from Our Karigars
                 </span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-burgundy">
+              <h2 className="text-2xl sm:text-4xl font-serif font-bold text-burgundy">
                 The New Arrivals Suite
               </h2>
-              <p className="text-sm text-charcoal-500 font-sans mt-2">
+              <p className="text-xs sm:text-sm text-charcoal-500 font-sans mt-1 sm:mt-2">
                 Contemporary statements blending timeless royal heritage with modern silhouettes.
               </p>
             </div>
 
             <button
               onClick={() => navigateToCategory('all')}
-              className="mt-4 md:mt-0 inline-flex items-center gap-1.5 text-xs uppercase font-bold tracking-widest text-burgundy hover:text-burgundy-700 pb-1 border-b border-burgundy hover:border-gold transition-colors"
+              className="mt-3 md:mt-0 inline-flex items-center gap-1.5 text-xs uppercase font-bold tracking-widest text-burgundy hover:text-burgundy-700 pb-1 border-b border-burgundy hover:border-gold transition-colors self-start md:self-auto"
             >
               <span>Explore Latest Releases</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {newArrivals.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

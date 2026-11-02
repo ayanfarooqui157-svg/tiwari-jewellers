@@ -121,7 +121,7 @@ export const ContactPage = () => {
 
           {/* RIGHT: INQUIRY FORM (7 COLS) */}
           <div className="lg:col-span-7">
-            <div className="bg-white rounded-3xl p-8 sm:p-10 border border-ivory-300 shadow-sm">
+            <div className="bg-white rounded-3xl p-4 sm:p-10 border border-ivory-300 shadow-sm">
               <h3 className="font-serif font-bold text-xl text-burgundy mb-2">
                 Request a Private Appointment or Inquiry
               </h3>
