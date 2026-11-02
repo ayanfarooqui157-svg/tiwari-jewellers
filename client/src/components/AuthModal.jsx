@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Lock, Mail, User, Phone, ArrowRight } from 'lucide-react';
 import { useShop } from '../context/useShop';
 
@@ -12,6 +13,17 @@ export const AuthModal = () => {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Lock body scroll when auth modal is open
+  useEffect(() => {
+    if (isAuthOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isAuthOpen]);
 
   if (!isAuthOpen) return null;
 
@@ -58,10 +70,11 @@ export const AuthModal = () => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={() => setIsAuthOpen(false)} aria-hidden="true" />
       <div 
-        className="bg-white rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-ivory-300 relative animate-in fade-in zoom-in-95 duration-200"
+        className="relative z-10 bg-white rounded-3xl max-w-md w-full max-h-[92vh] overflow-y-auto shadow-2xl border border-ivory-300 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -234,6 +247,7 @@ export const AuthModal = () => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -26,7 +26,7 @@ const MainLayout = () => {
   }, [currentView]);
 
   return (
-    <div className="flex flex-col min-h-screen w-full overflow-x-hidden bg-ivory text-charcoal font-sans selection:bg-gold-200 selection:text-burgundy-950">
+    <div className="flex flex-col min-h-screen w-full overflow-x-clip bg-ivory text-charcoal font-sans selection:bg-gold-200 selection:text-burgundy-950">
       {/* 1. Global Navigation Bar */}
       <Navbar />
 

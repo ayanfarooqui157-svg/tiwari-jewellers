@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Star, ShoppingBag, ShieldCheck, Heart, ArrowRight, Check } from 'lucide-react';
 import { useShop } from '../context/useShop';
 
@@ -18,6 +19,17 @@ export const ProductQuickViewModal = () => {
   const [selectedMetal, setSelectedMetal] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
+
+  // Lock body scroll when quick view modal is open
+  useEffect(() => {
+    if (quickViewProduct) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [quickViewProduct]);
 
   if (!quickViewProduct) return null;
 
@@ -43,10 +55,11 @@ export const ProductQuickViewModal = () => {
     }, 1200);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      <div className="fixed inset-0" onClick={() => setQuickViewProduct(null)} aria-hidden="true" />
       <div 
-        className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-ivory-300 relative animate-in fade-in zoom-in-95 duration-200"
+        className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-ivory-300 relative z-10 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -265,6 +278,7 @@ export const ProductQuickViewModal = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

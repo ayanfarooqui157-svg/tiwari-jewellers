@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Heart, ShoppingBag, User, Menu, X, 
   Sparkles, ShieldCheck, ChevronDown, ArrowRight,
@@ -75,6 +76,29 @@ export const Navbar = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Lock body scroll when mobile drawer or search modal is open
+  useEffect(() => {
+    if (isMobileMenuOpen || isSearchOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobileMenuOpen, isSearchOpen]);
+
+  // Close overlays on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        setIsSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const navLinks = [
@@ -316,25 +340,35 @@ export const Navbar = () => {
         </nav>
       </div>
 
-      {/* 4. MOBILE DRAWER MENU */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity">
-          <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-white shadow-2xl flex flex-col z-50 p-6 overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-ivory-200">
+      {/* 4. MOBILE DRAWER MENU (Rendered via Portal to document.body so header backdrop-blur cannot clip it) */}
+      {isMobileMenuOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] flex animate-in fade-in duration-200">
+          {/* Full-screen Dark Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close menu backdrop"
+          />
+
+          {/* Drawer Menu Panel */}
+          <div className="relative z-10 w-[85vw] max-w-xs bg-white shadow-2xl flex flex-col h-full max-h-screen overflow-y-auto p-5 sm:p-6 animate-in slide-in-from-left duration-300">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-ivory-200 shrink-0">
               <div className="flex flex-col">
                 <span className="font-serif font-bold text-xl text-burgundy">TIWARI JWELLERS</span>
                 <span className="text-[9px] tracking-widest text-gold-600 uppercase">Elegance That Lasts Forever</span>
               </div>
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 text-charcoal hover:text-burgundy"
+                className="p-2 -mr-2 text-charcoal hover:text-burgundy rounded-full hover:bg-ivory transition-colors"
                 aria-label="Close menu"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="py-4 space-y-1">
+            {/* Navigation Links */}
+            <div className="py-4 space-y-1 flex-1">
               {navLinks.map((link, idx) => (
                 <button
                   key={idx}
@@ -351,13 +385,14 @@ export const Navbar = () => {
               ))}
             </div>
 
-            <div className="mt-auto pt-6 border-t border-ivory-200">
+            {/* Patron Account / Admin / Sign In */}
+            <div className="mt-auto pt-5 border-t border-ivory-200 shrink-0">
               {user ? (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="bg-ivory p-3 rounded-lg">
                     <p className="text-xs text-charcoal-400">Signed in as</p>
-                    <p className="text-sm font-bold text-burgundy">{user.name}</p>
-                    <p className="text-xs text-charcoal-500">{user.email}</p>
+                    <p className="text-sm font-bold text-burgundy truncate">{user.name}</p>
+                    <p className="text-xs text-charcoal-500 truncate">{user.email}</p>
                   </div>
                   {user.role === 'admin' && (
                     <button
@@ -395,7 +430,7 @@ export const Navbar = () => {
                       setIsMobileMenuOpen(false);
                       logout();
                     }}
-                    className="w-full py-2 px-3 text-red-600 text-xs font-semibold text-center"
+                    className="w-full py-2 px-3 text-red-600 text-xs font-semibold text-center hover:bg-red-50 rounded-lg transition-colors"
                   >
                     Sign Out
                   </button>
@@ -413,23 +448,32 @@ export const Navbar = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* 5. LIVE SEARCH POPUP MODAL */}
-      {isSearchOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-4 sm:pt-20 px-3 sm:px-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-ivory-300 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      {/* 5. LIVE SEARCH POPUP MODAL (Rendered via Portal to document.body) */}
+      {isSearchOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-4 sm:pt-20 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
+          <div 
+            className="fixed inset-0" 
+            onClick={() => {
+              setIsSearchOpen(false);
+              setSearchTerm('');
+            }}
+            aria-label="Close search backdrop"
+          />
+          <div className="relative z-10 bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-ivory-300 overflow-hidden animate-in zoom-in-95 duration-200 my-auto sm:my-0">
             {/* Search Input Bar */}
             <div className="p-4 border-b border-ivory-200 flex items-center gap-3">
-              <Search className="w-5 h-5 text-burgundy" />
+              <Search className="w-5 h-5 text-burgundy shrink-0" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search diamond rings, 22K gold necklaces, silver studs, bangles..."
-                className="w-full text-base outline-none placeholder:text-charcoal-400 font-sans"
+                className="w-full text-sm sm:text-base outline-none placeholder:text-charcoal-400 font-sans"
               />
               {searchTerm && (
                 <button 
@@ -444,7 +488,7 @@ export const Navbar = () => {
                   setIsSearchOpen(false);
                   setSearchTerm('');
                 }}
-                className="p-1.5 text-charcoal-400 hover:text-charcoal rounded-full hover:bg-ivory"
+                className="p-1.5 text-charcoal-400 hover:text-charcoal rounded-full hover:bg-ivory shrink-0"
                 aria-label="Close search"
               >
                 <X className="w-5 h-5" />
@@ -466,7 +510,7 @@ export const Navbar = () => {
             </div>
 
             {/* Live Search Results */}
-            <div className="p-4 max-h-[360px] overflow-y-auto">
+            <div className="p-4 max-h-[60vh] sm:max-h-[360px] overflow-y-auto">
               {searchTerm.trim().length > 1 ? (
                 searchResults.length > 0 ? (
                   <div className="space-y-2">
@@ -502,7 +546,7 @@ export const Navbar = () => {
                               <span>{product.category}</span>
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right shrink-0">
                             <p className="text-sm font-serif font-bold text-burgundy">
                               {formatPrice(product.price)}
                             </p>
@@ -539,7 +583,8 @@ export const Navbar = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );

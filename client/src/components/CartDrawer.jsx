@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Trash2, ShoppingBag, ArrowRight, Sparkles, 
   Tag, Gift, Check
@@ -29,6 +30,17 @@ export const CartDrawer = () => {
   const [couponInput, setCouponInput] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Lock body scroll when cart drawer is open
+  useEffect(() => {
+    if (isCartOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isCartOpen]);
+
   if (!isCartOpen) return null;
 
   const handleApplyCoupon = async (e) => {
@@ -43,8 +55,8 @@ export const CartDrawer = () => {
   const amountNeededForFreeShipping = Math.max(0, freeShippingThreshold - cartSubtotal);
   const freeShippingProgress = Math.min(100, (cartSubtotal / freeShippingThreshold) * 100);
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="absolute inset-0" onClick={() => setIsCartOpen(false)} />
 
       <div className="fixed inset-y-0 right-0 max-w-md w-full bg-white shadow-2xl flex flex-col z-50">
@@ -263,6 +275,7 @@ export const CartDrawer = () => {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
