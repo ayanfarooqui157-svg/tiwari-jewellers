@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, Shield, Award, Truck, RefreshCw } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const HeroBanner = () => {
   const { navigateToCategory } = useShop();

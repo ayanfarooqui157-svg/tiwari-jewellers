@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Sparkles, Check, Loader2 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const Newsletter = () => {
   const [email, setEmail] = useState('');

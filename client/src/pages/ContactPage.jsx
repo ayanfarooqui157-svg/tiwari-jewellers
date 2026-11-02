@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Phone, Mail, MapPin, Clock, MessageSquare, Send, Check, Loader2 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { Phone, Mail, MapPin, Clock, Send, Check, Loader2 } from 'lucide-react';
+import { useShop } from '../context/useShop';
 
 export const ContactPage = () => {
   const { showToast } = useShop();

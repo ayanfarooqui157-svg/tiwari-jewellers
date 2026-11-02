@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, Phone, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { X, Lock, Mail, User, Phone, ArrowRight } from 'lucide-react';
+import { useShop } from '../context/useShop';
 
 export const AuthModal = () => {
   const { isAuthOpen, setIsAuthOpen, login, showToast } = useShop();
@@ -25,54 +25,36 @@ export const AuthModal = () => {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email: email.trim(), password })
         });
         const data = await res.json();
         if (data.success) {
           login(data.user, data.token);
+          showToast('Welcome', `Signed in as ${data.user.name}`, 'gold');
         } else {
-          setErrorMsg(data.message || 'Login failed. Check credentials.');
+          setErrorMsg(data.message || 'Login failed. Please check credentials.');
         }
       } else if (mode === 'signup') {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, password, phone })
+          body: JSON.stringify({ name: name.trim(), email: email.trim(), password, phone: phone.trim() })
         });
         const data = await res.json();
         if (data.success) {
           login(data.user, data.token);
+          showToast('Account Created', `Welcome to Tiwari Jewellers, ${data.user.name}`, 'gold');
         } else {
-          setErrorMsg(data.message || 'Registration failed.');
+          setErrorMsg(data.message || 'Registration failed. Please check inputs.');
         }
       } else if (mode === 'forgot') {
-        showToast('Password Reset', `A secure reset link has been dispatched to ${email}`, 'gold');
+        showToast('Password Reset', `If an account exists for ${email}, a reset link has been dispatched.`, 'gold');
         setMode('login');
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Network error occurred');
+      setErrorMsg(err.message || 'Network error occurred. Please try again.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = (role) => {
-    if (role === 'admin') {
-      login({
-        id: "usr-admin",
-        name: "Vikram Tiwari",
-        email: "admin@tiwarijewellers.com",
-        role: "admin",
-        phone: "+91 99887 76655"
-      });
-    } else {
-      login({
-        id: "usr-01",
-        name: "Priya Sharma",
-        email: "priya@example.com",
-        role: "customer",
-        phone: "+91 98765 43210"
-      });
     }
   };
 
@@ -86,6 +68,7 @@ export const AuthModal = () => {
         <button
           onClick={() => setIsAuthOpen(false)}
           className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-ivory flex items-center justify-center text-charcoal-400 hover:text-burgundy transition-colors"
+          aria-label="Close modal"
         >
           <X className="w-4 h-4" />
         </button>
@@ -150,7 +133,7 @@ export const AuthModal = () => {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Priya Sharma"
+                    placeholder="e.g. Radhika Kapoor"
                     className="w-full pl-9 pr-3 py-2.5 text-xs border border-ivory-300 rounded-xl outline-none focus:border-burgundy"
                   />
                 </div>
@@ -249,36 +232,6 @@ export const AuthModal = () => {
               </button>
             </div>
           )}
-
-          {/* Quick Demo Login Credentials Bar */}
-          <div className="mt-6 pt-5 border-t border-ivory-200">
-            <p className="text-[10px] font-bold text-charcoal-400 uppercase tracking-wider text-center mb-3">
-              Fast Demo Logins (Instant Access)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('customer')}
-                className="p-2 rounded-xl bg-ivory hover:bg-ivory-300 border border-ivory-300 text-left transition-colors"
-              >
-                <p className="text-[11px] font-bold text-charcoal flex items-center gap-1">
-                  <User className="w-3 h-3 text-gold-600" /> Customer Demo
-                </p>
-                <p className="text-[9px] text-charcoal-400">Priya Sharma</p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('admin')}
-                className="p-2 rounded-xl bg-burgundy-50 hover:bg-burgundy-100 border border-burgundy-200 text-left transition-colors"
-              >
-                <p className="text-[11px] font-bold text-burgundy flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-burgundy" /> Store Admin
-                </p>
-                <p className="text-[9px] text-burgundy-600">Full Portal Access</p>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

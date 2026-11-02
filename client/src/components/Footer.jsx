@@ -1,8 +1,10 @@
 import React from 'react';
 import { 
-  Phone, Mail, MapPin, ShieldCheck, Heart, Sparkles, CreditCard, Lock
+  Phone, Mail, MapPin, ShieldCheck
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
+
+const currentYear = new Date().getFullYear();
 
 // Clean SVG Brand Icons
 const InstagramIcon = ({ className }) => (
@@ -180,7 +182,7 @@ export const Footer = () => {
 
         {/* Lower Strip */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-ivory/50">
-          <p>© {new Date().getFullYear()} TIWARI JWELLERS PVT. LTD. All rights reserved. Handcrafted with royal pride in India.</p>
+          <p>© {currentYear} TIWARI JWELLERS PVT. LTD. All rights reserved. Handcrafted with royal pride in India.</p>
           <div className="flex items-center gap-6">
             <a href="#privacy" className="hover:text-ivory transition-colors">Privacy Policy</a>
             <a href="#terms" className="hover:text-ivory transition-colors">Terms of Heritage</a>

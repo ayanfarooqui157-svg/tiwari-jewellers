@@ -50,14 +50,18 @@ tiwari-jewellers/
 
 ### Configure the server
 
-Copy `server/.env.example` to `server/.env`, set your local configuration, and
-provide a unique `JWT_SECRET` (for example, generate one with
+Copy `server/.env.example` to `server/.env` and set a unique `JWT_SECRET` (for
+example, generate one with
 `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).
-The server exits with an explicit error if the key is missing.
-The local `.env`, runtime database, uploaded files, and dependency/build
-directories are excluded from Git.
+The server exits with an explicit error if the key is missing. To connect
+MongoDB Atlas, set `MONGO_URI` in the root `.env` file; the app waits for that
+connection before starting. The root `.env` is ignored by Git. Without a
+MongoDB URI, the API continues to use its local JSON datastore.
 
 ### 1. Run Both Frontend and Backend Concurrently
+
+Run this command from the repository root (the directory containing this
+README), not from `client/`:
 
 ```bash
 npm run dev
@@ -78,12 +82,12 @@ npm run dev
   npm run dev:client
   ```
 
-### 3. Run Backend Test Suite
+### 3. Run Tests and Checks
 
 ```bash
-npm --prefix server test
+npm test
 ```
-Executes 19 end-to-end integration tests covering health, auth, orders, payments, coupons, reviews, pincodes, inquiries, and admin analytics.
+Runs 19 backend integration tests, then checks the frontend lint and production build. The backend test runner starts and stops its own local API server; it does not require MongoDB.
 
 ---
 

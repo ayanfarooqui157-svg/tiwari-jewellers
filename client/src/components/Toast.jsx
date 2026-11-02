@@ -1,6 +1,6 @@
 import React from 'react';
-import { CheckCircle2, Sparkles, Info, AlertCircle, X } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { CheckCircle2, Sparkles, AlertCircle } from 'lucide-react';
+import { useShop } from '../context/useShop';
 
 export const Toast = () => {
   const { toastMessage } = useShop();

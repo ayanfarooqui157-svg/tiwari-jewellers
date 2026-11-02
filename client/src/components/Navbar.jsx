@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Search, Heart, ShoppingBag, User, Menu, X, 
-  Sparkles, ShieldCheck, ChevronDown, Check, ArrowRight,
-  Shield, LogOut, Package, Settings, SlidersHorizontal
+  Sparkles, ShieldCheck, ChevronDown, ArrowRight,
+  LogOut, Package, Settings
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const Navbar = () => {
   const { 
@@ -15,6 +15,7 @@ export const Navbar = () => {
     navigateTo, 
     navigateToCategory, 
     navigateToProduct,
+    setProfileTab,
     currentView, 
     setIsCartOpen, 
     setIsAuthOpen,
@@ -25,7 +26,6 @@ export const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [announcementIndex, setAnnouncementIndex] = useState(0);
 
@@ -47,20 +47,16 @@ export const Navbar = () => {
     return () => clearInterval(timer);
   }, [announcements.length]);
 
-  // Handle Search Query filtering
-  useEffect(() => {
-    if (searchTerm.trim().length > 1) {
-      const q = searchTerm.toLowerCase().trim();
-      const matches = products.filter(p => 
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.material.toLowerCase().includes(q) ||
-        p.metal.toLowerCase().includes(q)
-      ).slice(0, 5);
-      setSearchResults(matches);
-    } else {
-      setSearchResults([]);
-    }
+  const searchResults = useMemo(() => {
+    if (searchTerm.trim().length <= 1) return [];
+
+    const query = searchTerm.toLowerCase().trim();
+    return (products || []).filter(product =>
+      (product.name || '').toLowerCase().includes(query) ||
+      (product.category || '').toLowerCase().includes(query) ||
+      (product.material || '').toLowerCase().includes(query) ||
+      (product.metal || '').toLowerCase().includes(query)
+    ).slice(0, 5);
   }, [searchTerm, products]);
 
   // Focus search input when modal opens
@@ -177,8 +173,12 @@ export const Navbar = () => {
             {/* Wishlist Button */}
             <button
               onClick={() => {
-                if (user) navigateTo('profile');
-                else setIsAuthOpen(true);
+                if (user) {
+                  if (setProfileTab) setProfileTab('wishlist');
+                  navigateTo('profile', 'wishlist');
+                } else {
+                  setIsAuthOpen(true);
+                }
               }}
               className="p-2 text-charcoal hover:text-burgundy transition-colors hover:bg-ivory rounded-full relative"
               title="Saved items"
@@ -239,7 +239,8 @@ export const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      navigateTo('profile');
+                      if (setProfileTab) setProfileTab('orders');
+                      navigateTo('profile', 'orders');
                     }}
                     className="w-full text-left px-4 py-2 text-xs text-charcoal-700 flex items-center gap-2.5 hover:bg-ivory transition-colors"
                   >
@@ -249,7 +250,8 @@ export const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      navigateTo('profile');
+                      if (setProfileTab) setProfileTab('wishlist');
+                      navigateTo('profile', 'wishlist');
                     }}
                     className="w-full text-left px-4 py-2 text-xs text-charcoal-700 flex items-center gap-2.5 hover:bg-ivory transition-colors"
                   >
@@ -326,6 +328,7 @@ export const Navbar = () => {
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 text-charcoal hover:text-burgundy"
+                aria-label="Close menu"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -370,11 +373,22 @@ export const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      navigateTo('profile');
+                      if (setProfileTab) setProfileTab('orders');
+                      navigateTo('profile', 'orders');
                     }}
                     className="w-full py-2 px-3 border border-burgundy text-burgundy rounded-lg text-xs font-semibold"
                   >
-                    My Orders & Wishlist
+                    My Orders
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      if (setProfileTab) setProfileTab('wishlist');
+                      navigateTo('profile', 'wishlist');
+                    }}
+                    className="w-full py-2 px-3 border border-burgundy text-burgundy rounded-lg text-xs font-semibold"
+                  >
+                    My Wishlist ({wishlist.length})
                   </button>
                   <button
                     onClick={() => {
@@ -431,6 +445,7 @@ export const Navbar = () => {
                   setSearchTerm('');
                 }}
                 className="p-1.5 text-charcoal-400 hover:text-charcoal rounded-full hover:bg-ivory"
+                aria-label="Close search"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -458,45 +473,48 @@ export const Navbar = () => {
                     <p className="text-xs text-charcoal-400 font-medium px-2">
                       Found {searchResults.length} matching pieces:
                     </p>
-                    {searchResults.map((product) => (
-                      <div
-                        key={product.id}
-                        onClick={() => {
-                          setIsSearchOpen(false);
-                          setSearchTerm('');
-                          navigateToProduct(product.id);
-                        }}
-                        className="flex items-center gap-4 p-2.5 hover:bg-ivory rounded-xl cursor-pointer transition-colors group"
-                      >
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-14 h-14 object-cover rounded-lg border border-ivory-200"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-charcoal group-hover:text-burgundy truncate">
-                            {product.name}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-charcoal-500 mt-0.5">
-                            <span className="bg-gold-50 text-gold-800 px-1.5 py-0.2 rounded font-medium">
-                              {product.metal}
-                            </span>
-                            <span>•</span>
-                            <span>{product.category}</span>
+                    {searchResults.map((product) => {
+                      const thumb = (product.images && product.images[0]) || product.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800';
+                      return (
+                        <div
+                          key={product.id}
+                          onClick={() => {
+                            setIsSearchOpen(false);
+                            setSearchTerm('');
+                            navigateToProduct(product.id);
+                          }}
+                          className="flex items-center gap-4 p-2.5 hover:bg-ivory rounded-xl cursor-pointer transition-colors group"
+                        >
+                          <img
+                            src={thumb}
+                            alt={product.name}
+                            className="w-14 h-14 object-cover rounded-lg border border-ivory-200 shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-charcoal group-hover:text-burgundy truncate">
+                              {product.name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-charcoal-500 mt-0.5">
+                              <span className="bg-gold-50 text-gold-800 px-1.5 py-0.5 rounded font-medium">
+                                {product.metal}
+                              </span>
+                              <span>•</span>
+                              <span>{product.category}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-serif font-bold text-burgundy">
+                              {formatPrice(product.price)}
+                            </p>
+                            {product.originalPrice > product.price && (
+                              <p className="text-[11px] text-charcoal-400 line-through">
+                                {formatPrice(product.originalPrice)}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-serif font-bold text-burgundy">
-                            {formatPrice(product.price)}
-                          </p>
-                          {product.originalPrice > product.price && (
-                            <p className="text-[11px] text-charcoal-400 line-through">
-                              {formatPrice(product.originalPrice)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <button
                       onClick={() => {
                         setIsSearchOpen(false);

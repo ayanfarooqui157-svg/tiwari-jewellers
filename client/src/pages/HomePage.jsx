@@ -1,6 +1,6 @@
 import React from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { ArrowRight } from 'lucide-react';
+import { useShop } from '../context/useShop';
 import { HeroBanner } from '../components/HeroBanner';
 import { CategoryGrid } from '../components/CategoryGrid';
 import { ProductCard } from '../components/ProductCard';
@@ -10,7 +10,7 @@ import { CustomerReviews } from '../components/CustomerReviews';
 import { Newsletter } from '../components/Newsletter';
 
 export const HomePage = () => {
-  const { products, navigateToCategory, navigateTo } = useShop();
+  const { products, navigateToCategory } = useShop();
 
   const bestsellers = products.filter(p => p.badge === 'Bestseller' || p.rating >= 4.9).slice(0, 4);
   const newArrivals = products.filter(p => p.isNew || p.badge === 'New Arrival' || p.badge === 'Festive Special').slice(0, 4);

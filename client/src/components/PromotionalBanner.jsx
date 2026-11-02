@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, ArrowRight, Copy, Check } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const PromotionalBanner = () => {
   const { navigateToCategory, showToast } = useShop();

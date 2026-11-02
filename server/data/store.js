@@ -3,10 +3,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_ORDERS, INITIAL_COUPONS } from './products.js';
+import { connectDB, isConnected, getCollection } from '../database/connection.js';
+import { config } from '../config/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE_PATH = path.join(__dirname, 'db.json');
+const DB_FILE_PATH = process.env.TIWARI_DATA_FILE
+  ? path.resolve(process.env.TIWARI_DATA_FILE)
+  : path.join(__dirname, 'db.json');
 
 class DataStore {
   constructor() {
@@ -32,7 +36,8 @@ class DataStore {
         this.users = parsed.users || this.getDefaultUsers();
         this.inquiries = parsed.inquiries || this.getDefaultInquiries();
         this.subscribers = parsed.subscribers || this.getDefaultSubscribers();
-        console.log(`📦 Loaded persistent database with ${this.products.length} products, ${this.orders.length} orders, and ${this.users.length} users.`);
+        this.ensureAdminUser();
+        console.log(`📦 Loaded local database with ${this.products.length} products, ${this.orders.length} orders, and ${this.users.length} users.`);
         return;
       } catch (err) {
         console.warn('⚠️ Error parsing db.json, re-initializing from seeds:', err.message);
@@ -51,35 +56,98 @@ class DataStore {
     console.log(`✨ Initialized new persistent store at ${DB_FILE_PATH}`);
   }
 
+  async syncWithMongo() {
+    try {
+      const db = await connectDB();
+      if (!db) return;
+
+      const productsCol = getCollection('products');
+      const categoriesCol = getCollection('categories');
+      const ordersCol = getCollection('orders');
+      const couponsCol = getCollection('coupons');
+      const usersCol = getCollection('users');
+      const inquiriesCol = getCollection('inquiries');
+      const subscribersCol = getCollection('subscribers');
+
+      if (!productsCol) return;
+
+      const count = await productsCol.countDocuments();
+      if (count === 0) {
+        console.log('🍃 MongoDB Atlas boutique database is empty. Seeding collections...');
+        if (this.products.length > 0) await productsCol.insertMany(this.products.map(p => ({ ...p })));
+        if (this.categories.length > 0) await categoriesCol.insertMany(this.categories.map(c => ({ ...c })));
+        if (this.orders.length > 0) await ordersCol.insertMany(this.orders.map(o => ({ ...o })));
+        if (this.coupons.length > 0) await couponsCol.insertMany(this.coupons.map(c => ({ ...c })));
+        if (this.users.length > 0) await usersCol.insertMany(this.users.map(u => ({ ...u })));
+        if (this.inquiries.length > 0) await inquiriesCol.insertMany(this.inquiries.map(i => ({ ...i })));
+        if (this.subscribers.length > 0) await subscribersCol.insertMany(this.subscribers.map(s => ({ ...s })));
+        console.log('✨ Seeded all collections to MongoDB Atlas successfully!');
+      } else {
+        // Hydrate from MongoDB Atlas
+        const [mProducts, mCategories, mOrders, mCoupons, mUsers, mInquiries, mSubscribers] = await Promise.all([
+          productsCol.find().toArray(),
+          categoriesCol.find().toArray(),
+          ordersCol.find().toArray(),
+          couponsCol.find().toArray(),
+          usersCol.find().toArray(),
+          inquiriesCol.find().toArray(),
+          subscribersCol.find().toArray()
+        ]);
+
+        if (mProducts.length > 0) this.products = mProducts.map(({ _id, ...p }) => p);
+        if (mCategories.length > 0) this.categories = mCategories.map(({ _id, ...c }) => c);
+        if (mOrders.length > 0) this.orders = mOrders.map(({ _id, ...o }) => o);
+        if (mCoupons.length > 0) this.coupons = mCoupons.map(({ _id, ...c }) => c);
+        if (mUsers.length > 0) this.users = mUsers.map(({ _id, ...u }) => u);
+        if (mInquiries.length > 0) this.inquiries = mInquiries.map(({ _id, ...i }) => i);
+        if (mSubscribers.length > 0) this.subscribers = mSubscribers.map(({ _id, ...s }) => s);
+
+        this.ensureAdminUser();
+        this.saveToFile();
+        console.log(`📦 Synchronized ${this.products.length} products, ${this.orders.length} orders, and ${this.users.length} users with MongoDB Atlas.`);
+      }
+    } catch (err) {
+      console.warn('⚠️ MongoDB Atlas sync notice:', err.message);
+    }
+  }
+
+  async persistToMongo(collectionName, doc, idField = 'id') {
+    if (!isConnected()) return;
+    try {
+      const col = getCollection(collectionName);
+      if (!col || !doc || !doc[idField]) return;
+      const { _id, ...cleanDoc } = doc;
+      await col.updateOne(
+        { [idField]: doc[idField] },
+        { $set: cleanDoc },
+        { upsert: true }
+      );
+    } catch (err) {
+      console.warn(`MongoDB Atlas write notice (${collectionName}):`, err.message);
+    }
+  }
+
+  async removeFromMongo(collectionName, id, idField = 'id') {
+    if (!isConnected()) return;
+    try {
+      const col = getCollection(collectionName);
+      if (!col) return;
+      await col.deleteOne({ [idField]: id });
+    } catch (err) {
+      console.warn(`MongoDB Atlas delete notice (${collectionName}):`, err.message);
+    }
+  }
+
   getDefaultUsers() {
+    const adminEmail = (config.admin?.email || "admin@tiwarijewellers.com").toLowerCase().trim();
+    const adminPassword = config.admin?.password || "RoyalTiwari@Admin2026";
+    const adminName = config.admin?.name || "Vikram Tiwari (Director)";
     return [
       {
-        id: "usr-01",
-        name: "Priya Sharma",
-        email: "priya@example.com",
-        passwordHash: bcrypt.hashSync("password123", 10),
-        role: "customer",
-        phone: "+91 98765 43210",
-        addresses: [
-          {
-            id: "addr-01",
-            fullName: "Priya Sharma",
-            street: "Flat 402, Royal Palms Residency, MG Road",
-            city: "Bengaluru",
-            state: "Karnataka",
-            pincode: "560001",
-            phone: "+91 98765 43210",
-            isDefault: true
-          }
-        ],
-        wishlist: ["tj-101", "tj-107"],
-        createdAt: "2026-10-01T10:00:00Z"
-      },
-      {
         id: "usr-admin",
-        name: "Vikram Tiwari",
-        email: "admin@tiwarijewellers.com",
-        passwordHash: bcrypt.hashSync("admin123", 10),
+        name: adminName,
+        email: adminEmail,
+        passwordHash: bcrypt.hashSync(adminPassword, 10),
         role: "admin",
         phone: "+91 99887 76655",
         addresses: [],
@@ -87,6 +155,47 @@ class DataStore {
         createdAt: "2026-09-01T10:00:00Z"
       }
     ];
+  }
+
+  ensureAdminUser() {
+    const adminEmail = (config.admin?.email || 'admin@tiwarijewellers.com').toLowerCase().trim();
+    const adminPassword = config.admin?.password || 'RoyalTiwari@Admin2026';
+    const adminName = config.admin?.name || 'Vikram Tiwari (Director)';
+
+    // Remove any demo customer Priya Sharma from users list and MongoDB
+    this.users = (this.users || []).filter(u => u.email !== 'priya@example.com' && u.id !== 'usr-01');
+    this.removeFromMongo('users', 'usr-01', 'id');
+    this.removeFromMongo('users', 'priya@example.com', 'email');
+
+    // Remove any demo orders for Priya Sharma
+    this.orders = (this.orders || []).filter(o => o.customer?.email !== 'priya@example.com' && o.id !== 'TJ-ORD-8821');
+    this.removeFromMongo('orders', 'TJ-ORD-8821', 'id');
+
+    let admin = this.users.find(u => u.role === 'admin' || (u.email && u.email.toLowerCase() === adminEmail));
+    if (!admin) {
+      admin = {
+        id: "usr-admin",
+        name: adminName,
+        email: adminEmail,
+        passwordHash: bcrypt.hashSync(adminPassword, 10),
+        role: "admin",
+        phone: "+91 99887 76655",
+        addresses: [],
+        wishlist: [],
+        createdAt: new Date().toISOString()
+      };
+      this.users.push(admin);
+    } else {
+      admin.name = adminName;
+      admin.email = adminEmail;
+      admin.role = 'admin';
+      if (adminPassword) {
+        admin.passwordHash = bcrypt.hashSync(adminPassword, 10);
+      }
+    }
+
+    this.saveToFile();
+    this.persistToMongo('users', admin);
   }
 
   getDefaultInquiries() {
@@ -98,7 +207,7 @@ class DataStore {
         phone: "+91 98200 44556",
         subject: "Bespoke Bridal Jewellery Consultation",
         message: "Looking for a customised 22K polki bridal choker and matching mathapatti for my upcoming wedding in December.",
-        status: "pending", // 'pending', 'contacted', 'resolved'
+        status: "pending",
         createdAt: "2026-10-31T09:30:00Z"
       },
       {
@@ -118,7 +227,7 @@ class DataStore {
     return [
       {
         id: "sub-01",
-        email: "priya@example.com",
+        email: "vip.patron@tiwarijewellers.com",
         subscribedAt: "2026-10-15T11:20:00Z",
         source: "footer-modal",
         voucherClaimed: true
@@ -218,12 +327,14 @@ class DataStore {
           result.sort((a, b) => b.price - a.price);
           break;
         case 'rating-desc':
+        case 'rating':
           result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
           break;
         case 'newest':
           result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
           break;
         case 'bestseller':
+        case 'bestselling':
           result.sort((a, b) => (b.badge === 'Bestseller' ? 1 : 0) - (a.badge === 'Bestseller' ? 1 : 0));
           break;
         default:
@@ -235,13 +346,24 @@ class DataStore {
   }
 
   getProductById(id) {
-    return this.products.find(p => p.id === id);
+    if (!id) return null;
+    const cleanId = String(id).trim().toLowerCase();
+    return this.products.find(p => p.id && p.id.toLowerCase() === cleanId);
   }
 
   addProduct(productData) {
     const newId = `tj-${Date.now().toString().slice(-4)}`;
     const categoryCode = (productData.category || 'JEW').slice(0, 3).toUpperCase();
     const sku = productData.sku || `TJ-${categoryCode}-${Math.floor(10 + Math.random() * 90)}`;
+
+    const defaultSizesByCategory = {
+      Rings: ["10", "12", "14", "16", "18"],
+      Bangles: ["2.4", "2.6", "2.8"],
+      Necklaces: ["Adjustable Dori", "16-18 inch"],
+      Bracelets: ["6.5 inch", "7 inch", "7.5 inch"],
+      Earrings: ["Standard"],
+      Pendants: ["Standard"]
+    };
 
     const newProduct = {
       id: newId,
@@ -273,13 +395,14 @@ class DataStore {
         certification: "100% BIS Hallmarked & IGI Certified",
         dimensions: productData.dimensions || "Standard Boutique Specifications"
       },
-      availableSizes: productData.availableSizes || ["12", "14", "16", "18"],
+      availableSizes: productData.availableSizes || defaultSizesByCategory[productData.category] || ["Standard"],
       careInstructions: "Store in exclusive Tiwari Jewellers royal velvet pouch. Avoid exposure to water, fragrances or domestic chemicals.",
       reviews: []
     };
 
     this.products.unshift(newProduct);
     this.saveToFile();
+    this.persistToMongo('products', newProduct);
     return newProduct;
   }
 
@@ -299,6 +422,10 @@ class DataStore {
       }
     };
 
+    if (updates.price !== undefined) updated.price = Number(updates.price);
+    if (updates.originalPrice !== undefined) updated.originalPrice = Number(updates.originalPrice);
+    if (updates.discount !== undefined) updated.discount = Number(updates.discount);
+
     if (updates.stockQuantity !== undefined) {
       updated.stockQuantity = Number(updates.stockQuantity);
       updated.inStock = updated.stockQuantity > 0;
@@ -312,6 +439,7 @@ class DataStore {
 
     this.products[idx] = updated;
     this.saveToFile();
+    this.persistToMongo('products', updated);
     return updated;
   }
 
@@ -320,6 +448,7 @@ class DataStore {
     if (idx === -1) return false;
     this.products.splice(idx, 1);
     this.saveToFile();
+    this.removeFromMongo('products', id);
     return true;
   }
 
@@ -346,6 +475,7 @@ class DataStore {
     prod.rating = Number((sumRatings / prod.reviews.length).toFixed(1));
 
     this.saveToFile();
+    this.persistToMongo('products', prod);
     return newReview;
   }
 
@@ -368,13 +498,19 @@ class DataStore {
   // ========================
   getOrders(userEmail = null) {
     if (userEmail) {
-      return this.orders.filter(o => o.customer && o.customer.email && o.customer.email.toLowerCase() === userEmail.toLowerCase());
+      const cleanEmail = userEmail.trim().toLowerCase();
+      return this.orders.filter(o => o.customer && o.customer.email && o.customer.email.toLowerCase() === cleanEmail);
     }
     return this.orders;
   }
 
   getOrderById(id) {
-    return this.orders.find(o => o.id === id || (o.trackingNumber && o.trackingNumber.toLowerCase() === id.toLowerCase()));
+    if (!id) return null;
+    const cleanId = String(id).trim().toLowerCase();
+    return this.orders.find(o => 
+      (o.id && o.id.toLowerCase() === cleanId) || 
+      (o.trackingNumber && o.trackingNumber.toLowerCase() === cleanId)
+    );
   }
 
   createOrder(orderData) {
@@ -387,13 +523,14 @@ class DataStore {
       shippingAddress: orderData.shippingAddress,
       items: orderData.items,
       pricing: orderData.pricing,
-      paymentMethod: orderData.paymentMethod || "Razorpay (Online Payment)",
-      paymentStatus: orderData.paymentStatus || "Paid",
+      paymentMethod: orderData.paymentMethod || "Cash on Delivery (COD)",
+      paymentStatus: orderData.paymentStatus || "Pending (Pay on Delivery)",
       paymentId: orderData.paymentId || null,
+      giftPackaging: !!orderData.giftPackaging,
       orderStatus: "Processing",
       trackingNumber,
       timeline: [
-        { status: "Order Placed", date: new Date().toISOString(), completed: true, note: "Order placed and payment authorized." },
+        { status: "Order Placed", date: new Date().toISOString(), completed: true, note: "Order placed and scheduled for insured dispatch." },
         { status: "Quality Assaying", date: null, completed: false, note: "BIS Hallmark verification and laser inscription assay." },
         { status: "Secure Vault Packing", date: null, completed: false, note: "Tamper-evident luxury presentation packaging." },
         { status: "Insured Transit", date: null, completed: false, note: "High-value armoured courier dispatch." },
@@ -409,12 +546,14 @@ class DataStore {
         if (prod) {
           prod.stockQuantity = Math.max(0, (prod.stockQuantity || 10) - (item.quantity || 1));
           if (prod.stockQuantity === 0) prod.inStock = false;
+          this.persistToMongo('products', prod);
         }
       });
     }
 
     this.orders.unshift(newOrder);
     this.saveToFile();
+    this.persistToMongo('orders', newOrder);
     return newOrder;
   }
 
@@ -429,7 +568,30 @@ class DataStore {
       ];
     }
 
-    // Update timeline step completion
+    const statusOrder = [
+      'order placed',
+      'quality assaying',
+      'secure vault packing',
+      'insured transit',
+      'shipped',
+      'delivered'
+    ];
+
+    const currentStatusIdx = statusOrder.findIndex(s => 
+      status.toLowerCase().includes(s) || s.includes(status.toLowerCase())
+    );
+
+    order.timeline.forEach(step => {
+      const stepIdx = statusOrder.findIndex(s => 
+        step.status.toLowerCase().includes(s) || s.includes(step.status.toLowerCase())
+      );
+      if (stepIdx !== -1 && currentStatusIdx !== -1 && stepIdx <= currentStatusIdx) {
+        step.completed = true;
+        if (!step.date) step.date = new Date().toISOString();
+      }
+    });
+
+    // Update or add specific step
     const step = order.timeline.find(t => t.status.toLowerCase().includes(status.toLowerCase()));
     if (step) {
       step.completed = true;
@@ -444,6 +606,7 @@ class DataStore {
     }
 
     this.saveToFile();
+    this.persistToMongo('orders', order);
     return order;
   }
 
@@ -482,6 +645,10 @@ class DataStore {
       valid: true,
       code: coupon.code,
       discountAmount,
+      discountPercent: coupon.discountPercent || null,
+      flatDiscount: coupon.flatDiscount || null,
+      minOrder: coupon.minOrder || 0,
+      maxDiscount: coupon.maxDiscount || null,
       description: coupon.description
     };
   }
@@ -491,7 +658,8 @@ class DataStore {
   // ========================
   findUserByEmail(email) {
     if (!email) return null;
-    return this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const cleanEmail = email.trim().toLowerCase();
+    return this.users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
   }
 
   findUserById(id) {
@@ -500,7 +668,8 @@ class DataStore {
   }
 
   registerUser({ name, email, password, phone }) {
-    if (this.findUserByEmail(email)) {
+    const cleanEmail = email.toLowerCase().trim();
+    if (this.findUserByEmail(cleanEmail)) {
       return { success: false, message: "An account with this email already exists." };
     }
 
@@ -510,7 +679,7 @@ class DataStore {
     const newUser = {
       id: `usr-${Date.now()}`,
       name,
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
       passwordHash,
       role: "customer",
       phone: phone || "",
@@ -521,11 +690,13 @@ class DataStore {
 
     this.users.push(newUser);
     this.saveToFile();
+    this.persistToMongo('users', newUser);
     return { success: true, user: this.sanitizeUser(newUser) };
   }
 
   loginUser(email, password) {
-    const user = this.findUserByEmail(email);
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const user = this.findUserByEmail(cleanEmail);
     if (!user) {
       return { success: false, message: "Invalid email or password." };
     }
@@ -541,6 +712,7 @@ class DataStore {
         user.passwordHash = bcrypt.hashSync(password, 10);
         delete user.password;
         this.saveToFile();
+        this.persistToMongo('users', user);
       }
     }
 
@@ -557,6 +729,7 @@ class DataStore {
     if (name) user.name = name;
     if (phone) user.phone = phone;
     this.saveToFile();
+    this.persistToMongo('users', user);
     return this.sanitizeUser(user);
   }
 
@@ -584,6 +757,7 @@ class DataStore {
 
     user.addresses.push(newAddr);
     this.saveToFile();
+    this.persistToMongo('users', user);
     return user.addresses;
   }
 
@@ -592,6 +766,7 @@ class DataStore {
     if (!user || !user.addresses) return null;
     user.addresses = user.addresses.filter(a => a.id !== addressId);
     this.saveToFile();
+    this.persistToMongo('users', user);
     return user.addresses;
   }
 
@@ -607,6 +782,7 @@ class DataStore {
       user.wishlist.push(productId);
     }
     this.saveToFile();
+    this.persistToMongo('users', user);
     return user.wishlist;
   }
 
@@ -632,6 +808,7 @@ class DataStore {
 
     this.inquiries.unshift(newInquiry);
     this.saveToFile();
+    this.persistToMongo('inquiries', newInquiry);
     return newInquiry;
   }
 
@@ -644,6 +821,7 @@ class DataStore {
     if (!inq) return null;
     inq.status = status;
     this.saveToFile();
+    this.persistToMongo('inquiries', inq);
     return inq;
   }
 
@@ -667,6 +845,7 @@ class DataStore {
 
     this.subscribers.unshift(newSub);
     this.saveToFile();
+    this.persistToMongo('subscribers', newSub);
     return { alreadySubscribed: false, subscriber: newSub };
   }
 

@@ -1,6 +1,86 @@
 import assert from 'assert';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { unlink } from 'node:fs/promises';
+import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 
-const BASE_URL = 'http://localhost:5000/api';
+let BASE_URL = process.env.TEST_API_URL?.replace(/\/$/, '') || '';
+const SERVER_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
+const TEST_DATA_FILE = path.join(tmpdir(), `tiwari-jewellers-test-${randomUUID()}.json`);
+let serverProcess;
+let serverOutput = '';
+
+function findAvailablePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      server.close(error => {
+        if (error) reject(error);
+        else resolve(port);
+      });
+    });
+  });
+}
+
+async function ensureServerRunning() {
+  if (BASE_URL) {
+    const response = await fetch(`${BASE_URL}/health`, {
+      signal: AbortSignal.timeout(1000)
+    });
+    if (!response.ok) {
+      throw new Error(`Test API health check failed with status ${response.status}`);
+    }
+    return;
+  }
+
+  const port = process.env.TEST_PORT || await findAvailablePort();
+  BASE_URL = `http://127.0.0.1:${port}/api`;
+  serverProcess = spawn(process.execPath, ['server.js'], {
+    cwd: SERVER_DIRECTORY,
+    env: {
+      ...process.env,
+      PORT: String(port),
+      TIWARI_DATA_FILE: TEST_DATA_FILE,
+      MONGO_URI: '',
+      MONGODB_URI: '',
+      JWT_SECRET: process.env.JWT_SECRET || 'tiwari-api-test-secret'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  for (const stream of [serverProcess.stdout, serverProcess.stderr]) {
+    stream.setEncoding('utf8');
+    stream.on('data', chunk => {
+      serverOutput = `${serverOutput}${chunk}`.slice(-4000);
+    });
+  }
+
+  for (let attempt = 0; attempt < 50; attempt++) {
+    if (serverProcess.exitCode !== null) {
+      throw new Error(`API server exited before becoming ready.\n${serverOutput}`);
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/health`, {
+        signal: AbortSignal.timeout(500)
+      });
+      if (response.ok) return;
+    } catch {
+      // The server may still be starting.
+    }
+
+    await delay(200);
+  }
+
+  serverProcess.kill();
+  throw new Error(`API server did not become ready.\n${serverOutput}`);
+}
 
 async function runTests() {
   console.log('🧪 Starting TIWARI JWELLERS Backend API Verification Suite...\n');
@@ -173,10 +253,30 @@ async function runTests() {
   // 6. Orders & Checkout
   let createdOrderId = '';
   let trackingNumber = '';
-  await test('POST /orders - Create order & deduct inventory', async () => {
+
+  await test('POST /orders - Reject unauthenticated order placement', async () => {
     const res = await fetch(`${BASE_URL}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer: { name: 'Guest User', email: 'guest@example.com' },
+        shippingAddress: { fullName: 'Guest', city: 'Mumbai', pincode: '400001' },
+        items: [{ id: firstProductId, name: 'Sample', price: 1000, quantity: 1 }],
+        pricing: { total: 1000 }
+      })
+    });
+    assert.strictEqual(res.status, 401);
+    const data = await res.json();
+    assert.strictEqual(data.success, false);
+  });
+
+  await test('POST /orders - Create order with authenticated user & deduct inventory', async () => {
+    const res = await fetch(`${BASE_URL}/orders`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
       body: JSON.stringify({
         customer: { name: 'Devika Patel', email: testEmail, phone: '+91 97766 55443' },
         shippingAddress: {
@@ -266,9 +366,38 @@ async function runTests() {
     assert.strictEqual(data.voucherCode, 'TIWARI10');
   });
 
-  // 11. Admin
-  await test('GET /admin/stats - Executive analytics and KPIs', async () => {
-    const res = await fetch(`${BASE_URL}/admin/stats`);
+  // 11. Admin (Strict Security & Access Control)
+  await test('GET /admin/stats - Reject non-admin access', async () => {
+    const res = await fetch(`${BASE_URL}/admin/stats`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    assert.strictEqual(res.status, 403);
+    const data = await res.json();
+    assert.strictEqual(data.success, false);
+  });
+
+  let adminToken = '';
+  await test('POST /auth/login - Real admin authentication', async () => {
+    const res = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'admin@tiwarijewellers.com',
+        password: 'RoyalTiwari@Admin2026'
+      })
+    });
+    assert.strictEqual(res.status, 200);
+    const data = await res.json();
+    assert.strictEqual(data.success, true);
+    assert.strictEqual(data.user.role, 'admin');
+    assert.ok(data.token);
+    adminToken = data.token;
+  });
+
+  await test('GET /admin/stats - Executive analytics accessible with admin token', async () => {
+    const res = await fetch(`${BASE_URL}/admin/stats`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.strictEqual(data.success, true);
@@ -276,10 +405,13 @@ async function runTests() {
     assert.ok(data.data.totalOrders !== undefined);
   });
 
-  await test('PATCH /admin/orders/:id/status - Update order dispatch status', async () => {
+  await test('PATCH /admin/orders/:id/status - Update order dispatch status with admin token', async () => {
     const res = await fetch(`${BASE_URL}/admin/orders/${createdOrderId}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${adminToken}`
+      },
       body: JSON.stringify({ status: 'Shipped' })
     });
     assert.strictEqual(res.status, 200);
@@ -289,10 +421,35 @@ async function runTests() {
   });
 
   console.log(`\n🎉 Verification Complete: ${passed}/${total} tests passed successfully!`);
+  return passed === total;
 }
 
-runTests().catch(err => {
-  console.error('Fatal test runner error:', err);
-  process.exit(1);
-});
+async function main() {
+  try {
+    await ensureServerRunning();
+    const allTestsPassed = await runTests();
+    if (!allTestsPassed) {
+      process.exitCode = 1;
+      if (serverOutput) console.error(`\nAPI server output:\n${serverOutput}`);
+    }
+  } finally {
+    if (serverProcess && serverProcess.exitCode === null) {
+      const exited = new Promise(resolve => serverProcess.once('exit', resolve));
+      serverProcess.kill();
+      await exited;
+    }
 
+    if (!process.env.TEST_API_URL) {
+      try {
+        await unlink(TEST_DATA_FILE);
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    }
+  }
+}
+
+main().catch(err => {
+  console.error('Fatal test runner error:', err);
+  process.exitCode = 1;
+});

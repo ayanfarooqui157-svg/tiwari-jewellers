@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { useShop, ShopProvider } from './context/ShopContext';
+import { ShopProvider } from './context/ShopContext';
+import { useShop } from './context/useShop';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { CartDrawer } from './components/CartDrawer';

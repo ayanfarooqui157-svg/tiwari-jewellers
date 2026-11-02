@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { 
   X, Trash2, ShoppingBag, ArrowRight, Sparkles, 
-  Tag, ShieldCheck, Gift, Check
+  Tag, Gift, Check
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const CartDrawer = () => {
   const { 
@@ -21,11 +21,12 @@ export const CartDrawer = () => {
     applyCouponCode,
     removeCoupon,
     navigateTo,
-    formatPrice 
+    formatPrice,
+    includeGiftBox,
+    setIncludeGiftBox
   } = useShop();
 
   const [couponInput, setCouponInput] = useState('');
-  const [includeGiftBox, setIncludeGiftBox] = useState(false);
   const [couponLoading, setCouponLoading] = useState(false);
 
   if (!isCartOpen) return null;
@@ -59,6 +60,7 @@ export const CartDrawer = () => {
           <button
             onClick={() => setIsCartOpen(false)}
             className="p-1.5 rounded-full hover:bg-ivory text-charcoal-400 hover:text-charcoal transition-colors"
+            aria-label="Close bag"
           >
             <X className="w-5 h-5" />
           </button>

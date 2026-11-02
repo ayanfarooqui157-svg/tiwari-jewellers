@@ -1,12 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const ShopContext = createContext();
-
-export const useShop = () => {
-  const context = useContext(ShopContext);
-  if (!context) throw new Error('useShop must be used within a ShopProvider');
-  return context;
-};
+import React, { useState, useEffect } from 'react';
+import { ShopContext } from './shop-context';
 
 export const ShopProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
@@ -28,9 +21,9 @@ export const ShopProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState(() => {
     try {
       const saved = localStorage.getItem('tj_wishlist');
-      return saved ? JSON.parse(saved) : ["tj-101", "tj-107"];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ["tj-101", "tj-107"];
+      return [];
     }
   });
 
@@ -38,13 +31,15 @@ export const ShopProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('tj_user');
-      return saved ? JSON.parse(saved) : {
-        id: "usr-01",
-        name: "Priya Sharma",
-        email: "priya@example.com",
-        role: "customer",
-        phone: "+91 98765 43210"
-      };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Clean out any lingering demo account
+        if (parsed && parsed.email !== 'priya@example.com' && parsed.id !== 'usr-01') {
+          return parsed;
+        }
+        localStorage.removeItem('tj_user');
+      }
+      return null;
     } catch {
       return null;
     }
@@ -90,16 +85,22 @@ export const ShopProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Fetch initial products and categories from backend
+  const requestProducts = async (params = {}) => {
+    const queryParams = new URLSearchParams(params).toString();
+    const response = await fetch(`/api/products?${queryParams}`);
+    return response.json();
+  };
+
+  const requestCategories = async () => {
+    const response = await fetch('/api/categories');
+    return response.json();
+  };
+
   const fetchProducts = async (params = {}) => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams(params).toString();
-      const res = await fetch(`/api/products?${queryParams}`);
-      const json = await res.json();
-      if (json.success) {
-        setProducts(json.data);
-      }
+      const json = await requestProducts(params);
+      if (json.success) setProducts(json.data);
     } catch (err) {
       console.error('Error fetching products:', err);
       setError(err.message);
@@ -110,19 +111,38 @@ export const ShopProvider = ({ children }) => {
 
   const fetchCategories = async () => {
     try {
-      const res = await fetch('/api/categories');
-      const json = await res.json();
-      if (json.success) {
-        setCategories(json.data);
-      }
+      const json = await requestCategories();
+      if (json.success) setCategories(json.data);
     } catch (err) {
       console.error('Error fetching categories:', err);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
-    fetchCategories();
+    let active = true;
+    requestProducts()
+      .then(json => {
+        if (active && json.success) setProducts(json.data);
+      })
+      .catch(err => {
+        console.error('Error fetching products:', err);
+        if (active) setError(err.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    requestCategories()
+      .then(json => {
+        if (active && json.success) setCategories(json.data);
+      })
+      .catch(err => {
+        console.error('Error fetching categories:', err);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Show Toast
@@ -138,6 +158,9 @@ export const ShopProvider = ({ children }) => {
     const size = selectedSize || (product.availableSizes && product.availableSizes[0]) || 'Standard';
     const metal = selectedMetal || product.metal || 'Standard';
     const cartItemId = `${product.id}-${size}-${metal}`;
+    const safeImage = Array.isArray(product.images) && product.images.length > 0
+      ? product.images[0]
+      : (typeof product.images === 'string' ? product.images : 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80');
 
     setCart(prev => {
       const existing = prev.find(item => item.cartItemId === cartItemId);
@@ -157,7 +180,7 @@ export const ShopProvider = ({ children }) => {
             sku: product.sku,
             price: product.price,
             originalPrice: product.originalPrice,
-            image: product.images[0],
+            image: safeImage,
             selectedSize: size,
             selectedMetal: metal,
             category: product.category,

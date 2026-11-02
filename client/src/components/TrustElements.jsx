@@ -1,5 +1,5 @@
 import React from 'react';
-import { Gem, ShieldCheck, Lock, HeadphonesIcon, Award, Sparkles } from 'lucide-react';
+import { Gem, ShieldCheck, Lock, HeadphonesIcon } from 'lucide-react';
 
 export const TrustElements = () => {
   const trustItems = [

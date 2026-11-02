@@ -1,18 +1,16 @@
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+
 import { config } from './config/index.js';
+import { connectDB, isConnected } from './database/connection.js';
+import { dataStore } from './data/store.js';
+
 import { requestLogger } from './middleware/logger.js';
 import { notFoundHandler, errorHandler } from './middleware/error.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 // Route handlers
 import authRoutes from './routes/auth.routes.js';
@@ -25,6 +23,16 @@ import couponsRoutes from './routes/coupons.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 import newsletterRoutes from './routes/newsletter.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+
+// File paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const uploadsDir = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const app = express();
 const PORT = config.port;
@@ -43,26 +51,24 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files for uploaded images
 app.use('/uploads', express.static(uploadsDir));
 
-// Custom request logger
+// Request logger
 app.use(requestLogger);
 
-// ========================
-// HEALTH & DIAGNOSTIC ROUTE
-// ========================
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     brand: 'TIWARI JWELLERS – Haute Joaillerie',
     tagline: 'Ancestral Royalty, Contemporary Mastery',
     environment: config.nodeEnv,
+    database: isConnected() ? 'MongoDB Atlas (Connected)' : 'Local Vault Store (Offline Fallback)',
+    dataSource: isConnected() ? 'mongodb_atlas' : 'local_json',
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });
 });
 
-// ========================
-// API ROUTES MOUNTING
-// ========================
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/categories', categoriesRoutes);
@@ -74,17 +80,31 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Fallback & Error Handling
+// Fallback and error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`\n💎 ========================================================`);
-  console.log(`✨ TIWARI JWELLERS Luxury Backend Online`);
-  console.log(`📡 URL: http://localhost:${PORT}`);
-  console.log(`🩺 Health: http://localhost:${PORT}/api/health`);
-  console.log(`🛡️ Mode: ${config.nodeEnv}`);
-  console.log(`💎 ========================================================\n`);
-});
+async function startServer() {
+  try {
+    if (config.mongodb.uri) {
+      await connectDB();
+      await dataStore.syncWithMongo();
+    }
+
+    app.listen(PORT, () => {
+      console.log('\n💎 ========================================');
+      console.log('✨ TIWARI JWELLERS Luxury Backend Online');
+      console.log(`📡 URL: http://localhost:${PORT}`);
+      console.log(`🩺 Health: http://localhost:${PORT}/api/health`);
+      console.log(`🛡️ Mode: ${config.nodeEnv}`);
+      console.log('💎 ========================================\n');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error.message);
+    process.exitCode = 1;
+  }
+}
+
+startServer();
 
 export default app;

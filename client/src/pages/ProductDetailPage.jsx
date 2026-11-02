@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Star, Heart, ShoppingBag, Zap, ShieldCheck, 
   Truck, RefreshCw, Award, Check, ChevronRight, 
-  Share2, MapPin, Sparkles, AlertCircle, Info, MessageSquarePlus
+  MapPin, Sparkles, MessageSquarePlus
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 import { ProductCard } from '../components/ProductCard';
 
 export const ProductDetailPage = () => {
@@ -13,20 +13,20 @@ export const ProductDetailPage = () => {
     products, 
     addToCart, 
     navigateTo, 
-    navigateToProduct, 
     wishlist, 
     toggleWishlist, 
     showToast,
     formatPrice 
   } = useShop();
 
-  const [product, setProduct] = useState(null);
+  const [fetchedProduct, setFetchedProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedMetal, setSelectedMetal] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('specs'); // 'specs', 'description', 'hallmark', 'care'
+  const [justAdded, setJustAdded] = useState(false);
   
   // Pincode checker state
   const [pincode, setPincode] = useState('110001');
@@ -44,7 +44,26 @@ export const ProductDetailPage = () => {
   // Sizing guide modal
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
-  // Fetch product details
+  const product = (fetchedProduct?.id === selectedProductId ? fetchedProduct : null)
+    || (products || []).find(item => item.id === selectedProductId);
+
+  const availableSizes = product?.availableSizes && product.availableSizes.length > 0
+    ? product.availableSizes
+    : ['Standard'];
+  const currentSize = selectedSize || availableSizes[0];
+
+  const availableMetals = [
+    product?.metal || '18K Yellow Gold',
+    '18K Rose Gold',
+    '14K White Gold'
+  ].filter((v, i, a) => a.indexOf(v) === i);
+  const currentMetal = selectedMetal || product?.metal || availableMetals[0];
+
+  const images = (Array.isArray(product?.images) && product.images.length > 0)
+    ? product.images
+    : [product?.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800'];
+  const safeImageIdx = activeImageIndex < images.length ? activeImageIndex : 0;
+
   useEffect(() => {
     if (!selectedProductId) return;
 
@@ -53,11 +72,11 @@ export const ProductDetailPage = () => {
         const res = await fetch(`/api/products/${selectedProductId}`);
         const data = await res.json();
         if (data.success) {
-          setProduct(data.data);
+          setFetchedProduct(data.data);
           setRelatedProducts(data.related || []);
-          setSelectedSize(data.data.availableSizes ? data.data.availableSizes[0] : 'Standard');
-          setSelectedMetal(data.data.metal || 'Standard');
           setActiveImageIndex(0);
+          setSelectedSize(null);
+          setSelectedMetal(null);
         }
       } catch (err) {
         console.error('Error loading product details:', err);
@@ -66,18 +85,6 @@ export const ProductDetailPage = () => {
 
     fetchDetail();
   }, [selectedProductId]);
-
-  // Fallback if not fetched from API yet
-  useEffect(() => {
-    if (!product && selectedProductId && products.length > 0) {
-      const p = products.find(i => i.id === selectedProductId);
-      if (p) {
-        setProduct(p);
-        setSelectedSize(p.availableSizes ? p.availableSizes[0] : 'Standard');
-        setSelectedMetal(p.metal || 'Standard');
-      }
-    }
-  }, [product, selectedProductId, products]);
 
   if (!product) {
     return (
@@ -116,12 +123,14 @@ export const ProductDetailPage = () => {
 
   // Add to cart
   const handleAddToCart = () => {
-    addToCart(product, selectedSize, selectedMetal, quantity);
+    addToCart(product, currentSize, currentMetal, quantity);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 1500);
   };
 
   // Buy now: adds to cart & proceeds straight to checkout
   const handleBuyNow = () => {
-    addToCart(product, selectedSize, selectedMetal, quantity);
+    addToCart(product, currentSize, currentMetal, quantity);
     navigateTo('checkout');
   };
 
@@ -146,8 +155,15 @@ export const ProductDetailPage = () => {
       });
       const data = await res.json();
       if (data.success) {
-        product.reviews.unshift(data.data);
-        product.reviewCount = product.reviews.length;
+        setFetchedProduct(currentProduct => {
+          const reviewProduct = currentProduct?.id === product.id ? currentProduct : product;
+          const reviews = [data.data, ...(reviewProduct.reviews || [])];
+          return {
+            ...reviewProduct,
+            reviews,
+            reviewCount: reviews.length
+          };
+        });
         setIsReviewModalOpen(false);
         setNewReviewAuthor('');
         setNewReviewTitle('');
@@ -181,15 +197,15 @@ export const ProductDetailPage = () => {
           <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4">
             
             {/* Thumbnails */}
-            {product.images.length > 1 && (
+            {images.length > 1 && (
               <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto sm:w-24 shrink-0 pb-2 sm:pb-0">
-                {product.images.map((img, idx) => (
+                {images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveImageIndex(idx)}
                     className={`w-18 h-18 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-ivory-100 ${
-                      activeImageIndex === idx 
-                        ? 'border-burgundy ring-2 ring-burgundy/20 scale-102' 
+                      safeImageIdx === idx 
+                        ? 'border-burgundy ring-2 ring-burgundy/20 scale-[1.02]' 
                         : 'border-ivory-300 opacity-70 hover:opacity-100'
                     }`}
                   >
@@ -202,7 +218,7 @@ export const ProductDetailPage = () => {
             {/* Main Zoomable Image */}
             <div className="flex-1 relative aspect-square rounded-3xl overflow-hidden bg-ivory-100 border border-ivory-300 group">
               <img
-                src={product.images[activeImageIndex] || product.images[0]}
+                src={images[safeImageIdx]}
                 alt={product.name}
                 className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110 cursor-crosshair"
               />
@@ -228,6 +244,7 @@ export const ProductDetailPage = () => {
                     : 'bg-white/90 text-charcoal-400 hover:text-burgundy hover:bg-white'
                 }`}
                 title="Save to Wishlist"
+                aria-label="Toggle wishlist"
               >
                 <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
               </button>
@@ -240,9 +257,9 @@ export const ProductDetailPage = () => {
               {/* Category & SKU */}
               <div className="flex items-center justify-between text-xs text-charcoal-400 mb-2 font-medium">
                 <span className="text-gold-700 font-bold uppercase tracking-wider">
-                  {product.metal} • {product.category}
+                  {currentMetal} • {product.category}
                 </span>
-                <span className="font-mono text-[11px]">SKU: {product.sku}</span>
+                <span className="font-mono text-[11px]">SKU: {product.sku || 'TJ-ROYAL'}</span>
               </div>
 
               {/* Title */}
@@ -254,10 +271,10 @@ export const ProductDetailPage = () => {
               <div className="flex items-center gap-3 mb-5">
                 <div className="flex items-center gap-1 bg-burgundy text-white px-2.5 py-1 rounded-lg text-xs font-bold">
                   <Star className="w-3.5 h-3.5 fill-current text-gold" />
-                  <span>{product.rating}</span>
+                  <span>{product.rating || 4.9}</span>
                 </div>
                 <span className="text-xs text-charcoal-500 font-medium">
-                  {product.reviewCount} Verified Patron Reviews
+                  {product.reviewCount || (product.reviews?.length) || 0} Verified Patron Reviews
                 </span>
                 <span className="text-ivory-400">•</span>
                 <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
@@ -290,15 +307,15 @@ export const ProductDetailPage = () => {
               {/* Metal & Purity Selector */}
               <div className="mb-5">
                 <label className="block text-xs font-bold text-charcoal uppercase tracking-wider mb-2">
-                  Metal Purity: <span className="text-burgundy font-serif font-bold normal-case text-sm">{selectedMetal}</span>
+                  Metal Purity: <span className="text-burgundy font-serif font-bold normal-case text-sm">{currentMetal}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {[product.metal, '18K Rose Gold', '14K White Gold'].filter((v, i, a) => a.indexOf(v) === i).map((metal) => (
+                  {availableMetals.map((metal) => (
                     <button
                       key={metal}
                       onClick={() => setSelectedMetal(metal)}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all ${
-                        selectedMetal === metal
+                        currentMetal === metal
                           ? 'bg-burgundy text-gold-100 border-burgundy shadow-sm'
                           : 'bg-white text-charcoal-700 border-ivory-300 hover:border-burgundy'
                       }`}
@@ -310,11 +327,11 @@ export const ProductDetailPage = () => {
               </div>
 
               {/* Sizing Selector */}
-              {product.availableSizes && product.availableSizes.length > 0 && (
+              {availableSizes && availableSizes.length > 0 && (
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-charcoal uppercase tracking-wider">
-                      Select Size: <span className="text-burgundy font-serif font-bold normal-case text-sm">{selectedSize}</span>
+                      Select Size: <span className="text-burgundy font-serif font-bold normal-case text-sm">{currentSize}</span>
                     </label>
                     <button
                       type="button"
@@ -326,12 +343,12 @@ export const ProductDetailPage = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {product.availableSizes.map((size) => (
+                    {availableSizes.map((size) => (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
                         className={`min-w-10 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
-                          selectedSize === size
+                          currentSize === size
                             ? 'bg-burgundy text-white border-burgundy shadow-sm scale-105'
                             : 'bg-white text-charcoal-700 border-ivory-300 hover:border-burgundy'
                         }`}
@@ -370,10 +387,23 @@ export const ProductDetailPage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     onClick={handleAddToCart}
-                    className="py-4 px-6 rounded-2xl bg-burgundy hover:bg-burgundy-600 text-gold-200 font-sans font-bold text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    className={`py-4 px-6 rounded-2xl font-sans font-bold text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 ${
+                      justAdded 
+                        ? 'bg-emerald-700 text-white' 
+                        : 'bg-burgundy hover:bg-burgundy-600 text-gold-200'
+                    }`}
                   >
-                    <ShoppingBag className="w-4 h-4 text-gold-300" />
-                    <span>Add to Cart</span>
+                    {justAdded ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Added to Bag!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4 text-gold-300" />
+                        <span>Add to Cart</span>
+                      </>
+                    )}
                   </button>
 
                   <button
@@ -629,7 +659,7 @@ export const ProductDetailPage = () => {
                   </div>
 
                   <div className="flex items-center gap-1 text-gold mb-1.5">
-                    {[...Array(rev.rating)].map((_, i) => (
+                    {[...Array(rev.rating || 5)].map((_, i) => (
                       <Star key={i} className="w-3.5 h-3.5 fill-current" />
                     ))}
                   </div>
@@ -766,7 +796,7 @@ export const ProductDetailPage = () => {
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-ivory-300 relative animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-4 border-b border-ivory-200 mb-4">
               <h3 className="font-serif text-lg font-bold text-burgundy">Standard Indian Ring & Bangle Sizing</h3>
-              <button onClick={() => setIsSizeGuideOpen(false)} className="p-1">
+              <button onClick={() => setIsSizeGuideOpen(false)} className="p-1" aria-label="Close size guide">
                 <span className="text-charcoal-400 font-bold">✕</span>
               </button>
             </div>

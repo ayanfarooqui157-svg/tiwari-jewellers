@@ -1,6 +1,6 @@
 import React from 'react';
-import { ShieldCheck, Award, Gem, Sparkles, Check } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { ShieldCheck, Award, Gem, Check } from 'lucide-react';
+import { useShop } from '../context/useShop';
 
 export const AboutPage = () => {
   const { navigateTo } = useShop();

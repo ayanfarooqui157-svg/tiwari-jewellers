@@ -25,10 +25,16 @@ router.get('/:id', (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Product not found in royal catalog' });
     }
 
-    // Related items from same category
-    const related = dataStore.getProducts({ category: product.category })
-      .filter(p => p.id !== product.id)
-      .slice(0, 4);
+    // Related items from same category, padded to 4 recommendations from general catalog if needed
+    let related = dataStore.getProducts({ category: product.category })
+      .filter(p => p.id !== product.id);
+    if (related.length < 4) {
+      const others = dataStore.getProducts({})
+        .filter(p => p.id !== product.id && !related.some(r => r.id === p.id));
+      related = [...related, ...others].slice(0, 4);
+    } else {
+      related = related.slice(0, 4);
+    }
 
     res.json({
       success: true,
@@ -53,11 +59,16 @@ router.post('/:id/reviews', (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    res.status(201).json({ success: true, data: review });
+    const updatedProduct = dataStore.getProductById(req.params.id);
+
+    res.status(201).json({ 
+      success: true, 
+      data: review,
+      product: updatedProduct 
+    });
   } catch (error) {
     next(error);
   }
 });
 
 export default router;
-

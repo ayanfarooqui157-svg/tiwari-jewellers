@@ -800,46 +800,6 @@ export const INITIAL_CATEGORIES = [
 
 export const INITIAL_ORDERS = [
   {
-    id: "TJ-ORD-8821",
-    customer: {
-      name: "Priya Sharma",
-      email: "priya@example.com",
-      phone: "+91 98765 43210"
-    },
-    shippingAddress: {
-      fullName: "Priya Sharma",
-      street: "Flat 402, Royal Palms Residency, MG Road",
-      city: "Bengaluru",
-      state: "Karnataka",
-      pincode: "560001",
-      phone: "+91 98765 43210"
-    },
-    items: [
-      {
-        id: "tj-101",
-        name: "The Solitaire Harmony Diamond Ring",
-        sku: "TJ-RNG-01",
-        price: 48999,
-        quantity: 1,
-        selectedSize: "14",
-        selectedMetal: "18K Yellow Gold",
-        image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=300&q=80"
-      }
-    ],
-    pricing: {
-      subtotal: 48999,
-      discount: 4899,
-      couponCode: "TIWARI10",
-      deliveryCharge: 0,
-      total: 44100
-    },
-    paymentMethod: "Razorpay (UPI / Card)",
-    paymentStatus: "Paid",
-    orderStatus: "Processing",
-    trackingNumber: "BLUEDART-TJ-992819",
-    createdAt: "2026-10-30T10:15:00Z"
-  },
-  {
     id: "TJ-ORD-8819",
     customer: {
       name: "Vikram Singhania",

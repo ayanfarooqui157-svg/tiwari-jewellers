@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { dataStore } from '../data/store.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -54,22 +55,30 @@ router.get('/:id', (req, res, next) => {
   }
 });
 
-// POST /api/orders - place order
-router.post('/', (req, res, next) => {
+// POST /api/orders - place order (Authenticated patrons only)
+router.post('/', authenticate, (req, res, next) => {
   try {
-    const { customer, shippingAddress, items, pricing, paymentMethod, paymentStatus, paymentId } = req.body;
+    const { customer, shippingAddress, items, pricing, paymentMethod, paymentStatus, paymentId, includeGiftBox } = req.body;
     if (!customer || !shippingAddress || !items || !Array.isArray(items) || items.length === 0 || !pricing) {
       return res.status(400).json({ success: false, message: 'Missing essential order specifications' });
     }
 
+    const orderCustomer = {
+      ...customer,
+      id: req.user.id,
+      email: req.user.email,
+      name: customer.name || req.user.name
+    };
+
     const newOrder = dataStore.createOrder({
-      customer,
+      customer: orderCustomer,
       shippingAddress,
       items,
       pricing,
       paymentMethod,
       paymentStatus,
-      paymentId
+      paymentId,
+      includeGiftBox
     });
 
     res.status(201).json({

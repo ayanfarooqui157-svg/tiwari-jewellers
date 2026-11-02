@@ -2,7 +2,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../.env') });
+const serverDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+dotenv.config({ path: resolve(serverDirectory, '..', '.env') });
+dotenv.config({ path: resolve(serverDirectory, '.env') });
 
 const rawEnv = (process.env.NODE_ENV || '').toLowerCase();
 const isProd = rawEnv === 'production';
@@ -19,8 +21,16 @@ export const config = {
   isDev: !isProd,
   jwtSecret,
   corsOrigin: process.env.CORS_ORIGIN || '*',
+  admin: {
+    email: process.env.ADMIN_EMAIL || 'admin@tiwarijewellers.com',
+    password: process.env.ADMIN_PASSWORD || 'RoyalTiwari@Admin2026',
+    name: process.env.ADMIN_NAME || 'Vikram Tiwari (Director)'
+  },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_tiwarijewellers_demo',
     keySecret: process.env.RAZORPAY_KEY_SECRET || 'rzp_test_secret_demo'
+  },
+  mongodb: {
+    uri: process.env.MONGO_URI || process.env.MONGODB_URI || null
   }
 };

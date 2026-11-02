@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart3, Package, ShoppingCart, Users, AlertTriangle, 
-  Plus, Edit, Trash2, CheckCircle2, X, RefreshCw, Eye, 
-  ArrowUpRight, ShieldCheck, Sparkles, SlidersHorizontal, Search, MessageSquare,
-  Upload, Image as ImageIcon
+  BarChart3, Package, ShoppingCart, AlertTriangle,
+  Plus, Edit, Trash2, X, Eye,
+  ArrowUpRight, ShieldCheck, Search, MessageSquare, Upload, Lock
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const AdminDashboard = () => {
-  const { user, products, fetchProducts, showToast, formatPrice, navigateTo } = useShop();
+  const { user, token, setIsAuthOpen, products, fetchProducts, showToast, formatPrice, navigateTo } = useShop();
+
+  const isAdmin = Boolean(user && user.role === 'admin');
 
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'products', 'orders', 'inquiries'
-  const [loading, setLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
+
+  // Helper for admin authorization headers
+  const getAdminHeaders = (includeContentType = true) => {
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (includeContentType) headers['Content-Type'] = 'application/json';
+    return headers;
+  };
 
   // Product modal state
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -46,11 +54,12 @@ export const AdminDashboard = () => {
 
     try {
       setUploadingImage(true);
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
-        headers: {
-          'x-admin-email': user?.email || 'admin@tiwarijewellers.com'
-        },
+        headers,
         body: formData
       });
       const data = await res.json();
@@ -70,39 +79,55 @@ export const AdminDashboard = () => {
   // Product search filter
   const [adminSearch, setAdminSearch] = useState('');
 
-  // Fetch admin stats, orders, and customer inquiries
+  const fetchAdminData = async () => {
+    const headers = getAdminHeaders();
+    const responses = await Promise.all([
+      fetch('/api/admin/stats', { headers }),
+      fetch('/api/orders', { headers }),
+      fetch('/api/admin/inquiries', { headers })
+    ]);
+    const [statsData, ordersData, inqData] = await Promise.all(
+      responses.map(response => response.json())
+    );
+    return { statsData, ordersData, inqData };
+  };
+
+  const applyAdminData = ({ statsData, ordersData, inqData }) => {
+    if (statsData?.success) setStats(statsData.data);
+    if (ordersData?.success) setOrders(ordersData.data);
+    if (inqData?.success) setInquiries(inqData.data);
+  };
+
   const loadAdminData = async () => {
     try {
-      setLoading(true);
-      const [statsRes, ordersRes, inqRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/orders'),
-        fetch('/api/admin/inquiries')
-      ]);
-      const statsData = await statsRes.json();
-      const ordersData = await ordersRes.json();
-      const inqData = await inqRes.json();
-
-      if (statsData.success) setStats(statsData.data);
-      if (ordersData.success) setOrders(ordersData.data);
-      if (inqData.success) setInquiries(inqData.data);
+      applyAdminData(await fetchAdminData());
     } catch (err) {
       console.error('Error fetching admin data:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAdminData();
-  }, []);
+    if (!isAdmin) return;
+    let active = true;
+    fetchAdminData()
+      .then(data => {
+        if (active) applyAdminData(data);
+      })
+      .catch(err => {
+        console.error('Error fetching admin data:', err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isAdmin, token]);
 
   // Update Inquiry Status
   const handleUpdateInquiryStatus = async (inquiryId, newStatus) => {
     try {
       const res = await fetch(`/api/contact/${inquiryId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
@@ -111,7 +136,7 @@ export const AdminDashboard = () => {
         showToast('Inquiry Updated', `Inquiry ${inquiryId} marked as ${newStatus}`, 'gold');
         loadAdminData();
       }
-    } catch (err) {
+    } catch {
       showToast('Error', 'Failed to update inquiry status.', 'error');
     }
   };
@@ -121,7 +146,7 @@ export const AdminDashboard = () => {
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
       const data = await res.json();
@@ -130,7 +155,7 @@ export const AdminDashboard = () => {
         showToast('Order Updated', `Order ${orderId} status set to ${newStatus}`, 'gold');
         loadAdminData();
       }
-    } catch (err) {
+    } catch {
       showToast('Error', 'Failed to update order status.', 'error');
     }
   };
@@ -158,16 +183,16 @@ export const AdminDashboard = () => {
   // Open Edit Product Modal
   const handleOpenEditModal = (prod) => {
     setEditingProduct(prod);
-    setFormName(prod.name);
-    setFormCategory(prod.category);
-    setFormMetal(prod.metal);
-    setFormMaterial(prod.material);
+    setFormName(prod.name || '');
+    setFormCategory(prod.category || 'Rings');
+    setFormMetal(prod.metal || '18K Yellow Gold');
+    setFormMaterial(prod.material || 'Diamond');
     setFormPurity(prod.purity || '18K (750)');
-    setFormPrice(String(prod.price));
-    setFormOriginalPrice(String(prod.originalPrice || prod.price));
+    setFormPrice(String(prod.price || ''));
+    setFormOriginalPrice(String(prod.originalPrice || prod.price || ''));
     setFormDiscount(String(prod.discount || 0));
     setFormStock(String(prod.stockQuantity || 10));
-    setFormImageUrl(prod.images[0] || '');
+    setFormImageUrl((prod.images && prod.images[0]) || prod.image || '');
     setFormBadge(prod.badge || 'New Arrival');
     setFormDescription(prod.description || '');
     setFormGrossWeight(prod.specifications?.grossWeight || '3.5 g');
@@ -203,7 +228,7 @@ export const AdminDashboard = () => {
         // Update
         const res = await fetch(`/api/admin/products/${editingProduct.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(),
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -214,7 +239,7 @@ export const AdminDashboard = () => {
         // Create
         const res = await fetch('/api/admin/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAdminHeaders(),
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -225,7 +250,7 @@ export const AdminDashboard = () => {
       setIsProductModalOpen(false);
       fetchProducts();
       loadAdminData();
-    } catch (err) {
+    } catch {
       showToast('Error', 'Could not save product.', 'error');
     }
   };
@@ -237,7 +262,8 @@ export const AdminDashboard = () => {
     }
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAdminHeaders(false)
       });
       const data = await res.json();
       if (data.success) {
@@ -245,16 +271,46 @@ export const AdminDashboard = () => {
         fetchProducts();
         loadAdminData();
       }
-    } catch (err) {
+    } catch {
       showToast('Error', 'Could not delete product.', 'error');
     }
   };
 
-  const filteredAdminProducts = products.filter(p => 
-    p.name.toLowerCase().includes(adminSearch.toLowerCase()) ||
-    p.category.toLowerCase().includes(adminSearch.toLowerCase()) ||
-    p.sku.toLowerCase().includes(adminSearch.toLowerCase())
+  const filteredAdminProducts = (products || []).filter(p => 
+    (p.name || '').toLowerCase().includes(adminSearch.toLowerCase()) ||
+    (p.category || '').toLowerCase().includes(adminSearch.toLowerCase()) ||
+    (p.sku || '').toLowerCase().includes(adminSearch.toLowerCase())
   );
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[70vh] bg-ivory flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-ivory-300 shadow-xl text-center">
+          <div className="w-16 h-16 rounded-full bg-burgundy/10 text-burgundy flex items-center justify-center mx-auto mb-4 border border-burgundy/20">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="font-serif text-2xl font-bold text-burgundy mb-2">Restricted Access</h2>
+          <p className="text-xs text-charcoal-600 font-sans leading-relaxed mb-6">
+            This administrative vault is reserved exclusively for Tiwari Jewellers store administrators. Please sign in with authorized administrator credentials.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="w-full py-3.5 bg-burgundy hover:bg-burgundy-600 text-gold-200 rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow-md"
+            >
+              Sign In as Administrator
+            </button>
+            <button
+              onClick={() => navigateTo('home')}
+              className="w-full py-3.5 bg-ivory-100 hover:bg-ivory-200 text-charcoal-700 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
+            >
+              Return to Boutique Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-ivory min-h-screen py-8">
@@ -312,7 +368,7 @@ export const AdminDashboard = () => {
             }`}
           >
             <Package className="w-4 h-4" />
-            <span>Product Catalog ({products.length})</span>
+            <span>Product Catalog ({(products || []).length})</span>
             {activeTab === 'products' && <span className="absolute bottom-0 inset-x-0 h-0.5 bg-gold" />}
           </button>
 
@@ -381,7 +437,7 @@ export const AdminDashboard = () => {
                 <div>
                   <span className="text-[10px] uppercase font-bold text-charcoal-400 tracking-wider">Active Catalog Designs</span>
                   <h3 className="text-2xl font-serif font-bold text-burgundy mt-1">
-                    {products.length}
+                    {(products || []).length}
                   </h3>
                   <span className="text-[11px] text-charcoal-400 mt-1 block">
                     Gold, Diamond & Silver
@@ -396,7 +452,7 @@ export const AdminDashboard = () => {
                 <div>
                   <span className="text-[10px] uppercase font-bold text-charcoal-400 tracking-wider">Low Stock Alerts</span>
                   <h3 className="text-2xl font-serif font-bold text-amber-700 mt-1">
-                    {stats?.lowStockCount || products.filter(p => p.stockQuantity < 5).length}
+                    {stats?.lowStockCount || (products || []).filter(p => p.stockQuantity < 5).length}
                   </h3>
                   <span className="text-[11px] text-amber-700 font-semibold mt-1 block">
                     Restock karigar batches
@@ -416,8 +472,8 @@ export const AdminDashboard = () => {
 
               <div className="space-y-4">
                 {['Rings', 'Earrings', 'Necklaces', 'Pendants', 'Bracelets', 'Bangles'].map((cat) => {
-                  const count = products.filter(p => p.category === cat).length;
-                  const pct = Math.round((count / (products.length || 1)) * 100);
+                  const count = (products || []).filter(p => p.category === cat).length;
+                  const pct = Math.round((count / ((products || []).length || 1)) * 100);
 
                   return (
                     <div key={cat} className="space-y-1.5 text-xs">
@@ -477,58 +533,63 @@ export const AdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ivory-200">
-                  {filteredAdminProducts.map((prod) => (
-                    <tr key={prod.id} className="hover:bg-ivory/50">
-                      <td className="py-3 px-2 flex items-center gap-3">
-                        <img src={prod.images[0]} alt={prod.name} className="w-12 h-12 object-cover rounded-xl border border-ivory-200" />
-                        <div>
-                          <p className="font-serif font-bold text-charcoal">{prod.name}</p>
-                          <p className="font-mono text-[10px] text-charcoal-400">{prod.sku}</p>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 font-medium text-charcoal">{prod.category}</td>
-                      <td className="py-3 px-2">
-                        <span className="px-2 py-0.5 rounded bg-gold/15 text-gold-900 font-bold text-[10px]">
-                          {prod.metal}
-                        </span>
-                      </td>
-                      <td className="py-3 px-2 font-serif font-bold text-burgundy">
-                        {formatPrice(prod.price)}
-                      </td>
-                      <td className="py-3 px-2">
-                        <span className={`font-bold ${prod.stockQuantity < 5 ? 'text-red-600' : 'text-charcoal'}`}>
-                          {prod.stockQuantity} units
-                        </span>
-                      </td>
-                      <td className="py-3 px-2">
-                        {prod.badge ? (
-                          <span className="px-2 py-0.5 rounded bg-burgundy text-gold-100 font-bold text-[9px]">
-                            {prod.badge}
+                  {filteredAdminProducts.map((prod) => {
+                    const thumb = (prod.images && prod.images[0]) || prod.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800';
+                    return (
+                      <tr key={prod.id} className="hover:bg-ivory/50">
+                        <td className="py-3 px-2 flex items-center gap-3">
+                          <img src={thumb} alt={prod.name} className="w-12 h-12 object-cover rounded-xl border border-ivory-200 shrink-0" />
+                          <div>
+                            <p className="font-serif font-bold text-charcoal">{prod.name}</p>
+                            <p className="font-mono text-[10px] text-charcoal-400">{prod.sku || 'TJ-ROYAL'}</p>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2 font-medium text-charcoal">{prod.category}</td>
+                        <td className="py-3 px-2">
+                          <span className="px-2 py-0.5 rounded bg-gold/15 text-gold-900 font-bold text-[10px]">
+                            {prod.metal}
                           </span>
-                        ) : (
-                          <span className="text-charcoal-300">-</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenEditModal(prod)}
-                            className="p-1.5 text-charcoal-500 hover:text-burgundy rounded-lg hover:bg-ivory"
-                            title="Edit Product"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(prod.id, prod.name)}
-                            className="p-1.5 text-charcoal-500 hover:text-red-600 rounded-lg hover:bg-red-50"
-                            title="Delete Product"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-3 px-2 font-serif font-bold text-burgundy">
+                          {formatPrice(prod.price)}
+                        </td>
+                        <td className="py-3 px-2">
+                          <span className={`font-bold ${prod.stockQuantity < 5 ? 'text-red-600' : 'text-charcoal'}`}>
+                            {prod.stockQuantity} units
+                          </span>
+                        </td>
+                        <td className="py-3 px-2">
+                          {prod.badge ? (
+                            <span className="px-2 py-0.5 rounded bg-burgundy text-gold-100 font-bold text-[9px]">
+                              {prod.badge}
+                            </span>
+                          ) : (
+                            <span className="text-charcoal-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEditModal(prod)}
+                              className="p-1.5 text-charcoal-500 hover:text-burgundy rounded-lg hover:bg-ivory"
+                              title="Edit Product"
+                              aria-label="Edit product"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(prod.id, prod.name)}
+                              className="p-1.5 text-charcoal-500 hover:text-red-600 rounded-lg hover:bg-red-50"
+                              title="Delete Product"
+                              aria-label="Delete product"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -716,7 +777,7 @@ export const AdminDashboard = () => {
               <h3 className="font-serif font-bold text-xl text-burgundy">
                 {editingProduct ? 'Edit Jewellery Piece' : 'Add New Jewellery Design'}
               </h3>
-              <button onClick={() => setIsProductModalOpen(false)} className="p-1">
+              <button onClick={() => setIsProductModalOpen(false)} className="p-1" aria-label="Close modal">
                 <X className="w-5 h-5 text-charcoal-400" />
               </button>
             </div>

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  ShieldCheck, Lock, Check, ArrowRight, 
-  MapPin, Phone, Mail, User, Sparkles, Printer, PackageCheck,
-  Banknote, Truck, Award, AlertCircle
+  ShieldCheck, Lock, ArrowRight,
+  MapPin, User, Sparkles, Printer, PackageCheck,
+  Banknote, Award, AlertCircle, Gift
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const CheckoutPage = () => {
   const { 
@@ -16,23 +16,44 @@ export const CheckoutPage = () => {
     appliedCoupon, 
     clearCart, 
     user, 
+    token,
+    setIsAuthOpen,
     navigateTo, 
     showToast,
-    formatPrice 
+    formatPrice,
+    includeGiftBox
   } = useShop();
 
+  // Address pre-population from user
+  const defaultAddr = user?.addresses?.[0];
+
   // Form State
-  const [fullName, setFullName] = useState(user?.name || 'Priya Sharma');
-  const [email, setEmail] = useState(user?.email || 'priya@example.com');
-  const [phone, setPhone] = useState(user?.phone || '+91 98765 43210');
-  const [street, setStreet] = useState('Flat 402, Royal Palms Residency, MG Road');
-  const [city, setCity] = useState('Bengaluru');
-  const [state, setState] = useState('Karnataka');
-  const [pincode, setPincode] = useState('560001');
+  const [fullName, setFullName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [street, setStreet] = useState(defaultAddr?.street || '');
+  const [city, setCity] = useState(defaultAddr?.city || '');
+  const [state, setState] = useState(defaultAddr?.state || 'Maharashtra');
+  const [pincode, setPincode] = useState(defaultAddr?.pincode || '');
 
   // Loading & Flow State
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      if (user.name) setFullName(user.name);
+      if (user.email) setEmail(user.email);
+      if (user.phone) setPhone(user.phone);
+      if (user.addresses && user.addresses.length > 0) {
+        const addr = user.addresses[0];
+        if (addr.street) setStreet(addr.street);
+        if (addr.city) setCity(addr.city);
+        if (addr.state) setState(addr.state);
+        if (addr.pincode) setPincode(addr.pincode);
+      }
+    }
+  }, [user]);
 
   if (cart.length === 0 && !confirmedOrder) {
     return (
@@ -55,6 +76,12 @@ export const CheckoutPage = () => {
   // Handle Place Order via Cash on Delivery
   const handleInitiateOrder = async (e) => {
     e.preventDefault();
+
+    if (!user) {
+      showToast('Login Required', 'Please sign in or register to place your jewellery order.', 'error');
+      setIsAuthOpen(true);
+      return;
+    }
 
     if (!fullName || !email || !phone || !street || !city || !pincode) {
       showToast('Incomplete Address', 'Please provide complete delivery details.', 'error');
@@ -91,16 +118,29 @@ export const CheckoutPage = () => {
           deliveryCharge,
           total: finalTotal
         },
+        includeGiftBox,
         paymentMethod: 'Cash on Delivery (COD)',
         paymentStatus: 'Pending (Pay on Delivery)'
       };
 
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(orderPayload)
       });
       const data = await res.json();
+      if (res.status === 401) {
+        showToast('Session Expired', 'Please sign in again to place your order.', 'error');
+        setIsAuthOpen(true);
+        return;
+      }
       if (data.success) {
         setConfirmedOrder(data.data);
         clearCart();
@@ -109,7 +149,7 @@ export const CheckoutPage = () => {
       } else {
         showToast('Order Error', data.message || 'Could not record order.', 'error');
       }
-    } catch (err) {
+    } catch {
       showToast('Error', 'Could not communicate with vault order registry.', 'error');
     } finally {
       setIsProcessing(false);
@@ -143,7 +183,7 @@ export const CheckoutPage = () => {
                 Thank You for Your Royal Patronage
               </h1>
               <p className="text-xs text-charcoal-500 font-sans max-w-lg mx-auto">
-                Your heirloom jewellery order is registered in our private vault ledger. Insured dispatch notification has been transmitted to <b>{confirmedOrder.customer.email}</b>.
+                Your heirloom jewellery order is registered in our private vault ledger. Insured dispatch notification has been transmitted to <b>{confirmedOrder.customer?.email || email}</b>.
               </p>
             </div>
 
@@ -153,7 +193,7 @@ export const CheckoutPage = () => {
               <div>
                 <p className="font-bold text-sm text-burgundy">Cash / UPI on Delivery Handover</p>
                 <p className="mt-0.5 text-charcoal-700">
-                  Please keep exact payable amount of <b className="text-burgundy">{formatPrice(confirmedOrder.pricing.total)}</b> ready. You can pay via <b>Cash</b> or scan the delivery executive's <b>UPI QR code (GPay / PhonePe / Paytm)</b> upon verifying the tamper-proof vault seal.
+                  Please keep exact payable amount of <b className="text-burgundy">{formatPrice(confirmedOrder.pricing?.total || finalTotal)}</b> ready. You can pay via <b>Cash</b> or scan the delivery executive's <b>UPI QR code (GPay / PhonePe / Paytm)</b> upon verifying the tamper-proof vault seal.
                 </p>
               </div>
             </div>
@@ -171,7 +211,7 @@ export const CheckoutPage = () => {
                 </div>
                 <div>
                   <span className="text-charcoal-400 block text-[10px] uppercase font-bold">Payable on Delivery</span>
-                  <span className="font-serif font-bold text-burgundy text-sm">{formatPrice(confirmedOrder.pricing.total)}</span>
+                  <span className="font-serif font-bold text-burgundy text-sm">{formatPrice(confirmedOrder.pricing?.total || finalTotal)}</span>
                 </div>
                 <div>
                   <span className="text-charcoal-400 block text-[10px] uppercase font-bold">Payment Mode</span>
@@ -198,10 +238,14 @@ export const CheckoutPage = () => {
 
               {/* Items summary */}
               <div className="pt-4 border-t border-ivory-300 divide-y divide-ivory-200">
-                {confirmedOrder.items.map((item, idx) => (
+                {confirmedOrder.items && confirmedOrder.items.map((item, idx) => (
                   <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-3">
-                      <img src={item.image} alt={item.name} className="w-10 h-10 object-cover rounded-lg border border-ivory-300" />
+                      <img 
+                        src={item.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800'} 
+                        alt={item.name} 
+                        className="w-10 h-10 object-cover rounded-lg border border-ivory-300" 
+                      />
                       <div>
                         <p className="font-serif font-bold text-charcoal">{item.name}</p>
                         <p className="text-[10px] text-charcoal-400">Qty: {item.quantity} | Size: {item.selectedSize} | {item.selectedMetal}</p>
@@ -218,10 +262,10 @@ export const CheckoutPage = () => {
               <h4 className="font-serif font-bold text-burgundy uppercase text-[11px] tracking-wider mb-2">
                 Delivering To
               </h4>
-              <p className="font-semibold text-charcoal">{confirmedOrder.shippingAddress.fullName}</p>
-              <p className="text-charcoal-600">{confirmedOrder.shippingAddress.street}</p>
-              <p className="text-charcoal-600">{confirmedOrder.shippingAddress.city}, {confirmedOrder.shippingAddress.state} - {confirmedOrder.shippingAddress.pincode}</p>
-              <p className="text-charcoal-500 mt-1">Contact: {confirmedOrder.shippingAddress.phone}</p>
+              <p className="font-semibold text-charcoal">{confirmedOrder.shippingAddress?.fullName || fullName}</p>
+              <p className="text-charcoal-600">{confirmedOrder.shippingAddress?.street || street}</p>
+              <p className="text-charcoal-600">{confirmedOrder.shippingAddress?.city || city}, {confirmedOrder.shippingAddress?.state || state} - {confirmedOrder.shippingAddress?.pincode || pincode}</p>
+              <p className="text-charcoal-500 mt-1">Contact: {confirmedOrder.shippingAddress?.phone || phone}</p>
             </div>
 
             {/* Actions */}
@@ -256,7 +300,7 @@ export const CheckoutPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Title */}
-        <div className="text-center max-w-xl mx-auto mb-10">
+        <div className="text-center max-w-xl mx-auto mb-8">
           <span className="text-xs uppercase font-bold tracking-widest text-gold-700">
             Secure Insured Checkout
           </span>
@@ -267,6 +311,28 @@ export const CheckoutPage = () => {
             Insured vault courier with tamper-evident seal and Cash / UPI on Delivery.
           </p>
         </div>
+
+        {/* Authentication Notice if Guest */}
+        {!user && (
+          <div className="max-w-4xl mx-auto mb-8 p-6 rounded-3xl bg-amber-50/70 border border-amber-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-burgundy text-gold-200 flex items-center justify-center shrink-0 shadow-sm">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-serif font-bold text-sm text-burgundy">Account Login Required to Place Order</p>
+                <p className="text-xs text-charcoal-600 mt-0.5">Please sign in or register to attach your bespoke warranty and track your shipment.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAuthOpen(true)}
+              className="px-6 py-2.5 bg-burgundy hover:bg-burgundy-600 text-gold-200 rounded-full text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap shadow"
+            >
+              Sign In / Register
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleInitiateOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           
@@ -456,7 +522,11 @@ export const CheckoutPage = () => {
               <div className="max-h-60 overflow-y-auto divide-y divide-ivory-200 pr-1">
                 {cart.map((item) => (
                   <div key={item.cartItemId} className="py-3 flex gap-3">
-                    <img src={item.image} alt={item.name} className="w-14 h-14 object-cover rounded-xl border border-ivory-200 shrink-0" />
+                    <img 
+                      src={item.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800'} 
+                      alt={item.name} 
+                      className="w-14 h-14 object-cover rounded-xl border border-ivory-200 shrink-0" 
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-serif font-bold text-charcoal truncate">{item.name}</p>
                       <p className="text-[10px] text-charcoal-400">Qty: {item.quantity} | Size: {item.selectedSize}</p>
@@ -474,6 +544,13 @@ export const CheckoutPage = () => {
                   <span>Bag Subtotal</span>
                   <span className="font-semibold text-charcoal">{formatPrice(cartSubtotal)}</span>
                 </div>
+
+                {includeGiftBox && (
+                  <div className="flex justify-between text-gold-800 font-medium">
+                    <span className="flex items-center gap-1.5"><Gift className="w-3.5 h-3.5" /> Luxury Gift Box & Ribbon</span>
+                    <span className="font-bold uppercase text-[10px] bg-gold/15 px-1.5 py-0.5 rounded text-gold-900">Complimentary</span>
+                  </div>
+                )}
 
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-800 font-semibold">
@@ -497,21 +574,33 @@ export const CheckoutPage = () => {
               </div>
 
               {/* Place Order CTA */}
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full py-4 bg-burgundy hover:bg-burgundy-600 text-gold-200 font-sans font-bold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
-              >
-                {isProcessing ? (
-                  <span>Dispatching to Vault Logistics...</span>
-                ) : (
-                  <>
-                    <Banknote className="w-4 h-4 text-gold-200" />
-                    <span>Confirm Order with COD • {formatPrice(finalTotal)}</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </>
-                )}
-              </button>
+              {!user ? (
+                <button
+                  type="button"
+                  onClick={() => setIsAuthOpen(true)}
+                  className="w-full py-4 bg-burgundy hover:bg-burgundy-600 text-gold-200 font-sans font-bold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
+                >
+                  <Lock className="w-4 h-4 text-gold-200" />
+                  <span>Sign In to Place Order</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="w-full py-4 bg-burgundy hover:bg-burgundy-600 text-gold-200 font-sans font-bold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
+                >
+                  {isProcessing ? (
+                    <span>Dispatching to Vault Logistics...</span>
+                  ) : (
+                    <>
+                      <Banknote className="w-4 h-4 text-gold-200" />
+                      <span>Confirm Order with COD • {formatPrice(finalTotal)}</span>
+                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              )}
 
               <div className="p-3 rounded-xl bg-ivory text-[10px] text-charcoal-500 space-y-1">
                 <p className="flex items-center gap-1.5 font-semibold text-charcoal">

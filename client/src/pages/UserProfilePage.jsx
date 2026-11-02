@@ -1,41 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import {
-  User, Package, Heart, MapPin, ShieldCheck,
-  Trash2, ShoppingBag, ArrowRight, CheckCircle2, Clock, Truck, Check, Plus
+  User, Package, Heart, MapPin,
+  Trash2, ShoppingBag, CheckCircle2, Plus
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const UserProfilePage = () => {
   const {
     user,
+    token,
     logout,
     wishlist,
     toggleWishlist,
     addToCart,
     products,
     navigateTo,
-    navigateToProduct,
     showToast,
-    formatPrice
+    formatPrice,
+    profileTab,
+    setProfileTab,
+    setIsAuthOpen
   } = useShop();
 
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'wishlist', 'addresses', 'profile'
+  const [activeTab, setActiveTab] = useState(profileTab || 'orders'); // 'orders', 'wishlist', 'addresses'
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Address state
-  const [addresses, setAddresses] = useState([
-    {
-      id: "addr-01",
-      fullName: user?.name || "Priya Sharma",
-      street: "Flat 402, Royal Palms Residency, MG Road",
-      city: "Bengaluru",
-      state: "Karnataka",
-      pincode: "560001",
-      phone: user?.phone || "+91 98765 43210",
-      isDefault: true
+  // Synchronize activeTab when profileTab changes (e.g. from Navbar wishlist link)
+  useEffect(() => {
+    if (profileTab) {
+      setActiveTab(profileTab);
     }
-  ]);
+  }, [profileTab]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (setProfileTab) setProfileTab(tab);
+  };
+
+  // Address state
+  const [addresses, setAddresses] = useState(user?.addresses || []);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [newStreet, setNewStreet] = useState('');
   const [newCity, setNewCity] = useState('');
@@ -48,9 +52,14 @@ export const UserProfilePage = () => {
       if (!user?.email) return;
       try {
         setLoadingOrders(true);
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const [ordersRes, userRes] = await Promise.all([
-          fetch(`/api/orders?email=${user.email}`),
-          fetch(`/api/auth/me?email=${user.email}`)
+          fetch(`/api/orders?email=${encodeURIComponent(user.email)}`, { headers }),
+          fetch(`/api/auth/me?email=${encodeURIComponent(user.email)}`, { headers })
         ]);
         const ordersData = await ordersRes.json();
         const userData = await userRes.json();
@@ -69,9 +78,9 @@ export const UserProfilePage = () => {
     };
 
     fetchUserData();
-  }, [user]);
+  }, [user, token]);
 
-  const wishlistedProducts = products.filter(p => wishlist.includes(p.id));
+  const wishlistedProducts = (products || []).filter(p => wishlist.includes(p.id));
 
   const handleAddAddress = async (e) => {
     e.preventDefault();
@@ -82,15 +91,18 @@ export const UserProfilePage = () => {
       city: newCity,
       state: newState,
       pincode: newPincode,
-      phone: user?.phone || '+91 98765 43210',
+      phone: user?.phone || '',
       isDefault: addresses.length === 0
     };
 
     try {
       if (user?.email) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const res = await fetch('/api/auth/addresses', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ email: user.email, address: addressPayload })
         });
         const data = await res.json();
@@ -122,8 +134,12 @@ export const UserProfilePage = () => {
   const handleRemoveAddress = async (id) => {
     try {
       if (user?.email) {
-        const res = await fetch(`/api/auth/addresses/${id}?email=${user.email}`, {
-          method: 'DELETE'
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`/api/auth/addresses/${id}?email=${encodeURIComponent(user.email)}`, {
+          method: 'DELETE',
+          headers
         });
         const data = await res.json();
         if (data.success) {
@@ -144,15 +160,23 @@ export const UserProfilePage = () => {
       <div className="min-h-[60vh] bg-ivory flex flex-col items-center justify-center p-8 text-center">
         <User className="w-12 h-12 text-burgundy mb-3 opacity-60" />
         <h2 className="font-serif text-2xl font-bold text-burgundy mb-2">Sign in to Access Your Vault</h2>
-        <p className="text-xs text-charcoal-500 mb-6 font-sans">
-          Track orders, access saved heirloom wishlist pieces and manage addresses.
+        <p className="text-xs text-charcoal-500 mb-6 font-sans max-w-sm">
+          Track orders, access saved heirloom wishlist pieces and manage verified delivery addresses.
         </p>
-        <button
-          onClick={() => navigateTo('home')}
-          className="px-6 py-3 bg-burgundy hover:bg-burgundy-600 text-gold-200 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
-        >
-          Return Home
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setIsAuthOpen(true)}
+            className="px-6 py-3 bg-burgundy hover:bg-burgundy-600 text-gold-200 rounded-full text-xs font-bold uppercase tracking-widest transition-all shadow"
+          >
+            Sign In / Register
+          </button>
+          <button
+            onClick={() => navigateTo('home')}
+            className="px-6 py-3 bg-ivory-100 hover:bg-ivory-200 text-charcoal-700 rounded-full text-xs font-bold uppercase tracking-widest transition-all"
+          >
+            Return Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -171,7 +195,7 @@ export const UserProfilePage = () => {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-serif font-bold text-burgundy">{user.name}</h1>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full bg-gold/20 text-gold-900 border border-gold/40">
-                  Royal Patron Tier
+                  {user.role === 'admin' ? 'Store Administrator' : 'Royal Patron Tier'}
                 </span>
               </div>
               <p className="text-xs text-charcoal-500 font-sans mt-0.5">{user.email} • {user.phone}</p>
@@ -199,9 +223,10 @@ export const UserProfilePage = () => {
         {/* Tab Navigation */}
         <div className="flex border-b border-ivory-300 gap-6 sm:gap-10 mb-8 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('orders')}
-            className={`pb-3 text-xs sm:text-sm font-serif font-bold uppercase tracking-wider transition-all relative flex items-center gap-2 ${activeTab === 'orders' ? 'text-burgundy' : 'text-charcoal-400 hover:text-charcoal'
-              }`}
+            onClick={() => handleTabChange('orders')}
+            className={`pb-3 text-xs sm:text-sm font-serif font-bold uppercase tracking-wider transition-all relative flex items-center gap-2 ${
+              activeTab === 'orders' ? 'text-burgundy' : 'text-charcoal-400 hover:text-charcoal'
+            }`}
           >
             <Package className="w-4 h-4" />
             <span>Order History ({orders.length})</span>
@@ -209,9 +234,10 @@ export const UserProfilePage = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab('wishlist')}
-            className={`pb-3 text-xs sm:text-sm font-serif font-bold uppercase tracking-wider transition-all relative flex items-center gap-2 ${activeTab === 'wishlist' ? 'text-burgundy' : 'text-charcoal-400 hover:text-charcoal'
-              }`}
+            onClick={() => handleTabChange('wishlist')}
+            className={`pb-3 text-xs sm:text-sm font-serif font-bold uppercase tracking-wider transition-all relative flex items-center gap-2 ${
+              activeTab === 'wishlist' ? 'text-burgundy' : 'text-charcoal-400 hover:text-charcoal'
+            }`}
           >
             <Heart className="w-4 h-4" />
             <span>Saved Wishlist ({wishlist.length})</span>
@@ -219,9 +245,10 @@ export const UserProfilePage = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab('addresses')}
-            className={`pb-3 text-xs sm:text-sm font-serif font-bold uppercase tracking-wider transition-all relative flex items-center gap-2 ${activeTab === 'addresses' ? 'text-burgundy' : 'text-charcoal-400 hover:text-charcoal'
-              }`}
+            onClick={() => handleTabChange('addresses')}
+            className={`pb-3 text-xs sm:text-sm font-serif font-bold uppercase tracking-wider transition-all relative flex items-center gap-2 ${
+              activeTab === 'addresses' ? 'text-burgundy' : 'text-charcoal-400 hover:text-charcoal'
+            }`}
           >
             <MapPin className="w-4 h-4" />
             <span>Saved Addresses ({addresses.length})</span>
@@ -260,12 +287,13 @@ export const UserProfilePage = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${ord.orderStatus === 'Delivered'
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        ord.orderStatus === 'Delivered'
                           ? 'bg-emerald-100 text-emerald-800'
                           : ord.orderStatus === 'Shipped'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-amber-100 text-amber-800'
-                        }`}>
+                      }`}>
                         {ord.orderStatus}
                       </span>
                       <span className="text-sm font-serif font-bold text-burgundy">
@@ -289,8 +317,9 @@ export const UserProfilePage = () => {
 
                         return (
                           <div key={idx} className="flex flex-col items-center">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center mb-1 text-xs font-bold transition-all ${isDone ? 'bg-burgundy text-gold-200 shadow' : 'bg-ivory-200 text-charcoal-400'
-                              }`}>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center mb-1 text-xs font-bold transition-all ${
+                              isDone ? 'bg-burgundy text-gold-200 shadow' : 'bg-ivory-200 text-charcoal-400'
+                            }`}>
                               {idx + 1}
                             </div>
                             <span className={`text-[10px] ${isDone ? 'font-bold text-charcoal' : 'text-charcoal-400'}`}>
@@ -304,10 +333,14 @@ export const UserProfilePage = () => {
 
                   {/* Items in order */}
                   <div className="divide-y divide-ivory-200 pt-2 border-t border-ivory-200">
-                    {ord.items.map((item, i) => (
+                    {ord.items && ord.items.map((item, i) => (
                       <div key={i} className="py-3 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-3">
-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-xl border border-ivory-200" />
+                          <img 
+                            src={item.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800'} 
+                            alt={item.name} 
+                            className="w-12 h-12 object-cover rounded-xl border border-ivory-200" 
+                          />
                           <div>
                             <h4 className="font-serif font-bold text-charcoal">{item.name}</h4>
                             <p className="text-[10px] text-charcoal-400">Qty: {item.quantity} | Size: {item.selectedSize} | {item.selectedMetal}</p>
@@ -352,41 +385,45 @@ export const UserProfilePage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {wishlistedProducts.map((p) => (
-                  <div key={p.id} className="bg-white rounded-3xl overflow-hidden border border-ivory-300 shadow-sm flex flex-col justify-between group">
-                    <div className="relative aspect-square overflow-hidden bg-ivory-100">
-                      <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      <button
-                        onClick={() => toggleWishlist(p.id)}
-                        className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 text-burgundy flex items-center justify-center shadow"
-                        title="Remove from wishlist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col justify-between">
-                      <div>
-                        <span className="text-[10px] text-gold-700 uppercase font-bold tracking-wider">{p.metal}</span>
-                        <h4 className="font-serif font-bold text-sm text-charcoal line-clamp-1 mt-1 mb-2">{p.name}</h4>
-                        <p className="font-serif font-bold text-burgundy">{formatPrice(p.price)}</p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t border-ivory-200">
+                {wishlistedProducts.map((p) => {
+                  const thumb = (p.images && p.images[0]) || p.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800';
+                  return (
+                    <div key={p.id} className="bg-white rounded-3xl overflow-hidden border border-ivory-300 shadow-sm flex flex-col justify-between group">
+                      <div className="relative aspect-square overflow-hidden bg-ivory-100">
+                        <img src={thumb} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         <button
-                          onClick={() => {
-                            addToCart(p);
-                            toggleWishlist(p.id);
-                          }}
-                          className="w-full py-2 bg-burgundy hover:bg-burgundy-600 text-gold-200 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          onClick={() => toggleWishlist(p.id)}
+                          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 text-burgundy flex items-center justify-center shadow"
+                          title="Remove from wishlist"
+                          aria-label="Remove from wishlist"
                         >
-                          <ShoppingBag className="w-3.5 h-3.5 text-gold-200" />
-                          <span>Move to Bag</span>
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
+
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <span className="text-[10px] text-gold-700 uppercase font-bold tracking-wider">{p.metal}</span>
+                          <h4 className="font-serif font-bold text-sm text-charcoal line-clamp-1 mt-1 mb-2">{p.name}</h4>
+                          <p className="font-serif font-bold text-burgundy">{formatPrice(p.price)}</p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-ivory-200">
+                          <button
+                            onClick={() => {
+                              addToCart(p);
+                              toggleWishlist(p.id);
+                            }}
+                            className="w-full py-2 bg-burgundy hover:bg-burgundy-600 text-gold-200 text-xs font-bold uppercase tracking-wider rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5 text-gold-200" />
+                            <span>Move to Bag</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

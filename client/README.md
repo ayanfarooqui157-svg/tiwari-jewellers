@@ -1,16 +1,17 @@
-# React + Vite
+# TIWARI JWELLERS client
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The Vite development server proxies `/api` and `/uploads` requests to the
+backend at `http://localhost:5000`. Start both applications from the repository
+root so the backend is available:
 
-Currently, two official plugins are available:
+```bash
+npm run dev
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Before starting the backend, configure `server/.env` with a non-empty
+`JWT_SECRET`. To enable MongoDB, set `MONGO_URI` in the repository-root `.env`.
+If you start only this client with `npm run dev` from the
+`client` directory, API requests will fail until the backend is started
+separately from the repository root with `npm run dev:server`.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+The client is available at [http://localhost:3000](http://localhost:3000).

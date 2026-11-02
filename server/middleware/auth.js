@@ -61,20 +61,22 @@ export const requireAdmin = (req, res, next) => {
     return next();
   }
 
-  // Also support check via request header or body/query for convenience
-  const adminEmail = req.headers['x-admin-email'] || req.body?.adminEmail || req.query?.adminEmail;
-  if (adminEmail) {
-    const user = dataStore.findUserByEmail(adminEmail);
-    if (user && user.role === 'admin') {
-      req.user = dataStore.sanitizeUser(user);
-      return next();
+  // Check token from Authorization header if not already decoded
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyToken(token);
+    if (decoded) {
+      const user = dataStore.findUserById(decoded.id) || dataStore.findUserByEmail(decoded.email);
+      if (user && user.role === 'admin') {
+        req.user = dataStore.sanitizeUser(user);
+        return next();
+      }
     }
   }
 
-  // Allow in development / local workspace environment
-  if (config.isDev || config.nodeEnv !== 'production') {
-    return next();
-  }
-
-  return res.status(403).json({ success: false, message: 'Executive admin privilege required' });
+  return res.status(403).json({ 
+    success: false, 
+    message: 'Executive admin privilege required. Access restricted to authorized store administrators.' 
+  });
 };

@@ -1,36 +1,36 @@
 import React, { useState, useMemo } from 'react';
 import { 
   Filter, SlidersHorizontal, ChevronRight, X, 
-  RotateCcw, Sparkles, Check, ChevronDown, Grid, LayoutGrid 
+  RotateCcw, Sparkles, Check, ChevronDown
 } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 import { ProductCard } from '../components/ProductCard';
+
+const priceBrackets = [
+  { label: 'All Prices', value: 'all' },
+  { label: 'Under ₹5,000', value: 'under-5k', min: 0, max: 5000 },
+  { label: '₹5,000 - ₹25,000', value: '5k-25k', min: 5000, max: 25000 },
+  { label: '₹25,000 - ₹75,000', value: '25k-75k', min: 25000, max: 75000 },
+  { label: 'Above ₹75,000', value: 'above-75k', min: 75000, max: Infinity }
+];
 
 export const ShopPage = () => {
   const { 
     products, 
     selectedCategory, 
     setSelectedCategory, 
-    navigateTo, 
-    formatPrice 
+    navigateTo
   } = useShop();
 
   // Filter States
-  const [activeCategory, setActiveCategory] = useState(selectedCategory || 'all');
+  const activeCategory = selectedCategory || 'all';
   const [selectedMaterial, setSelectedMaterial] = useState('all');
   const [selectedMetal, setSelectedMetal] = useState('all');
-  const [priceRange, setPriceRange] = useState('all'); // 'under-10k', '10k-50k', '50k-100k', 'above-100k'
+  const [priceRange, setPriceRange] = useState('all');
   const [onlyInStock, setOnlyInStock] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [sortBy, setSortBy] = useState('featured');
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-
-  // Sync state if selectedCategory changed from navbar
-  React.useEffect(() => {
-    if (selectedCategory) {
-      setActiveCategory(selectedCategory);
-    }
-  }, [selectedCategory]);
 
   const categoriesList = [
     { label: 'All Jewellery', value: 'all' },
@@ -59,56 +59,57 @@ export const ShopPage = () => {
     { label: '925 Sterling Silver', value: '925' }
   ];
 
-  const priceBrackets = [
-    { label: 'All Prices', value: 'all' },
-    { label: 'Under ₹5,000', value: 'under-5k', min: 0, max: 5000 },
-    { label: '₹5,000 - ₹25,000', value: '5k-25k', min: 5000, max: 25000 },
-    { label: '₹25,000 - ₹75,000', value: '25k-75k', min: 25000, max: 75000 },
-    { label: 'Above ₹75,000', value: 'above-75k', min: 75000, max: Infinity }
-  ];
-
   // Filtering Logic
   const filteredProducts = useMemo(() => {
-    let result = [...products];
+    let result = [...(products || [])];
 
     // Category
     if (activeCategory !== 'all') {
       const cat = activeCategory.toLowerCase();
       if (cat === 'gold') {
-        result = result.filter(p => p.material.toLowerCase() === 'gold' || p.metal.toLowerCase().includes('gold'));
+        result = result.filter(p => 
+          (p.material || '').toLowerCase() === 'gold' || 
+          (p.metal || '').toLowerCase().includes('gold')
+        );
       } else if (cat === 'silver') {
-        result = result.filter(p => p.material.toLowerCase() === 'silver' || p.metal.toLowerCase().includes('silver'));
+        result = result.filter(p => 
+          (p.material || '').toLowerCase() === 'silver' || 
+          (p.metal || '').toLowerCase().includes('silver')
+        );
       } else {
-        result = result.filter(p => p.category.toLowerCase() === cat);
+        result = result.filter(p => (p.category || '').toLowerCase() === cat);
       }
     }
 
     // Material
     if (selectedMaterial !== 'all') {
-      result = result.filter(p => p.material.toLowerCase() === selectedMaterial.toLowerCase());
+      result = result.filter(p => (p.material || '').toLowerCase() === selectedMaterial.toLowerCase());
     }
 
     // Metal / Purity
     if (selectedMetal !== 'all') {
-      result = result.filter(p => p.metal.toLowerCase().includes(selectedMetal.toLowerCase()) || p.purity?.toLowerCase().includes(selectedMetal.toLowerCase()));
+      result = result.filter(p => 
+        (p.metal || '').toLowerCase().includes(selectedMetal.toLowerCase()) || 
+        (p.purity || '').toLowerCase().includes(selectedMetal.toLowerCase())
+      );
     }
 
     // Price bracket
     if (priceRange !== 'all') {
       const bracket = priceBrackets.find(b => b.value === priceRange);
       if (bracket) {
-        result = result.filter(p => p.price >= bracket.min && p.price <= bracket.max);
+        result = result.filter(p => (p.price || 0) >= bracket.min && (p.price || 0) <= bracket.max);
       }
     }
 
     // In Stock
     if (onlyInStock) {
-      result = result.filter(p => p.inStock && p.stockQuantity > 0);
+      result = result.filter(p => p.inStock && (p.stockQuantity || 0) > 0);
     }
 
     // Minimum Rating
     if (minRating > 0) {
-      result = result.filter(p => p.rating >= minRating);
+      result = result.filter(p => (p.rating || 0) >= minRating);
     }
 
     // Sorting
@@ -120,13 +121,13 @@ export const ShopPage = () => {
         result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
         break;
       case 'price-asc':
-        result.sort((a, b) => a.price - b.price);
+        result.sort((a, b) => (a.price || 0) - (b.price || 0));
         break;
       case 'price-desc':
-        result.sort((a, b) => b.price - a.price);
+        result.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
         break;
       default:
         // 'featured'
@@ -137,7 +138,7 @@ export const ShopPage = () => {
   }, [products, activeCategory, selectedMaterial, selectedMetal, priceRange, onlyInStock, minRating, sortBy]);
 
   const clearAllFilters = () => {
-    setActiveCategory('all');
+    setSelectedCategory('all');
     setSelectedMaterial('all');
     setSelectedMetal('all');
     setPriceRange('all');
@@ -163,7 +164,7 @@ export const ShopPage = () => {
             Home
           </button>
           <ChevronRight className="w-3.5 h-3.5" />
-          <button onClick={() => { setActiveCategory('all'); setSelectedCategory('all'); }} className="hover:text-burgundy transition-colors">
+          <button onClick={() => setSelectedCategory('all')} className="hover:text-burgundy transition-colors">
             Jewellery
           </button>
           {activeCategory !== 'all' && (
@@ -216,7 +217,7 @@ export const ShopPage = () => {
             {activeCategory !== 'all' && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ivory border border-ivory-300 text-xs text-charcoal-700">
                 Category: <b className="capitalize">{activeCategory}</b>
-                <X className="w-3.5 h-3.5 cursor-pointer text-charcoal-400 hover:text-burgundy" onClick={() => setActiveCategory('all')} />
+                <X className="w-3.5 h-3.5 cursor-pointer text-charcoal-400 hover:text-burgundy" onClick={() => setSelectedCategory('all')} />
               </span>
             )}
             {selectedMaterial !== 'all' && (
@@ -301,7 +302,7 @@ export const ShopPage = () => {
                   {categoriesList.map((cat) => (
                     <button
                       key={cat.value}
-                      onClick={() => setActiveCategory(cat.value)}
+                      onClick={() => setSelectedCategory(cat.value)}
                       className={`w-full text-left px-3 py-1.5 text-xs rounded-lg transition-colors flex items-center justify-between ${
                         activeCategory === cat.value
                           ? 'bg-burgundy text-white font-semibold'
@@ -435,7 +436,7 @@ export const ShopPage = () => {
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-ivory-200 mb-6">
                 <h3 className="font-serif font-bold text-base text-burgundy">Filters</h3>
-                <button onClick={() => setIsMobileFiltersOpen(false)} className="p-1">
+                <button onClick={() => setIsMobileFiltersOpen(false)} className="p-1" aria-label="Close filters">
                   <X className="w-5 h-5 text-charcoal" />
                 </button>
               </div>
@@ -447,7 +448,7 @@ export const ShopPage = () => {
                   {categoriesList.map((cat) => (
                     <button
                       key={cat.value}
-                      onClick={() => setActiveCategory(cat.value)}
+                      onClick={() => setSelectedCategory(cat.value)}
                       className={`w-full text-left px-3 py-1.5 text-xs rounded-lg ${
                         activeCategory === cat.value ? 'bg-burgundy text-white font-bold' : 'text-charcoal-700'
                       }`}

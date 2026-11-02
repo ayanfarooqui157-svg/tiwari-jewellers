@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Star, ShoppingBag, ShieldCheck, Heart, ArrowRight, Check } from 'lucide-react';
-import { useShop } from '../context/ShopContext';
+import { useShop } from '../context/useShop';
 
 export const ProductQuickViewModal = () => {
   const { 
@@ -9,7 +9,7 @@ export const ProductQuickViewModal = () => {
     addToCart, 
     navigateToProduct, 
     wishlist, 
-    toggleWishlist,
+    toggleWishlist, 
     formatPrice 
   } = useShop();
 
@@ -23,8 +23,16 @@ export const ProductQuickViewModal = () => {
 
   const product = quickViewProduct;
   const isWishlisted = wishlist.includes(product.id);
+  const images = (Array.isArray(product.images) && product.images.length > 0)
+    ? product.images
+    : [product.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800'];
+  const safeImageIdx = selectedImage < images.length ? selectedImage : 0;
+
   const currentSize = selectedSize || (product.availableSizes && product.availableSizes[0]) || 'Standard';
-  const currentMetal = selectedMetal || product.metal;
+  const availableMetals = product.availableMetals && product.availableMetals.length > 0
+    ? product.availableMetals
+    : [product.metal || '18K Yellow Gold'];
+  const currentMetal = selectedMetal || product.metal || availableMetals[0];
 
   const handleAdd = () => {
     addToCart(product, currentSize, currentMetal, quantity);
@@ -45,6 +53,7 @@ export const ProductQuickViewModal = () => {
         <button
           onClick={() => setQuickViewProduct(null)}
           className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/80 hover:bg-ivory border border-ivory-300 flex items-center justify-center text-charcoal hover:text-burgundy transition-colors"
+          aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -54,7 +63,7 @@ export const ProductQuickViewModal = () => {
           <div className="space-y-4">
             <div className="aspect-square rounded-2xl overflow-hidden bg-ivory-100 border border-ivory-200 relative">
               <img
-                src={product.images[selectedImage] || product.images[0]}
+                src={images[safeImageIdx]}
                 alt={product.name}
                 className="w-full h-full object-cover object-center"
               />
@@ -66,14 +75,14 @@ export const ProductQuickViewModal = () => {
             </div>
 
             {/* Thumbnail selector */}
-            {product.images.length > 1 && (
+            {images.length > 1 && (
               <div className="flex gap-3 overflow-x-auto pb-1">
-                {product.images.map((img, i) => (
+                {images.map((img, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
-                    className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                      selectedImage === i ? 'border-burgundy ring-2 ring-burgundy/20' : 'border-ivory-300 opacity-70 hover:opacity-100'
+                    className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
+                      safeImageIdx === i ? 'border-burgundy ring-2 ring-burgundy/20' : 'border-ivory-300 opacity-70 hover:opacity-100'
                     }`}
                   >
                     <img src={img} alt="thumbnail" className="w-full h-full object-cover" />
@@ -89,12 +98,12 @@ export const ProductQuickViewModal = () => {
               {/* Category & Rating */}
               <div className="flex items-center justify-between text-xs text-charcoal-400 mb-2">
                 <span className="text-gold-700 font-semibold uppercase tracking-wider">
-                  {product.category} • {product.metal}
+                  {product.category || 'Jewellery'} • {currentMetal}
                 </span>
                 <div className="flex items-center gap-1 text-gold-600">
                   <Star className="w-4 h-4 fill-current" />
-                  <span className="font-bold text-charcoal text-xs">{product.rating}</span>
-                  <span className="text-charcoal-400">({product.reviewCount} reviews)</span>
+                  <span className="font-bold text-charcoal text-xs">{product.rating || 4.9}</span>
+                  <span className="text-charcoal-400">({product.reviewCount || 0} reviews)</span>
                 </div>
               </div>
 
@@ -124,6 +133,30 @@ export const ProductQuickViewModal = () => {
               <p className="text-xs text-charcoal-600 leading-relaxed mb-6">
                 {product.description}
               </p>
+
+              {/* Available Metals selector (if multiple) */}
+              {availableMetals.length > 1 && (
+                <div className="mb-4">
+                  <label className="text-xs font-semibold text-charcoal uppercase tracking-wider mb-2 block">
+                    Metal: <span className="text-burgundy font-normal">{currentMetal}</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableMetals.map((metal) => (
+                      <button
+                        key={metal}
+                        onClick={() => setSelectedMetal(metal)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+                          currentMetal === metal
+                            ? 'bg-burgundy text-white border-burgundy shadow-sm'
+                            : 'bg-white text-charcoal border-ivory-300 hover:border-burgundy'
+                        }`}
+                      >
+                        {metal}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Available Sizes selector */}
               {product.availableSizes && product.availableSizes.length > 0 && (
@@ -213,6 +246,7 @@ export const ProductQuickViewModal = () => {
                       ? 'bg-burgundy text-white border-burgundy'
                       : 'border-ivory-300 text-charcoal-400 hover:text-burgundy hover:bg-ivory'
                   }`}
+                  aria-label="Wishlist"
                 >
                   <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
                 </button>
