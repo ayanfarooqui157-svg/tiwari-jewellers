@@ -340,18 +340,18 @@ export const Navbar = () => {
         </nav>
       </div>
 
-      {/* 4. MOBILE DRAWER MENU (Rendered via Portal to document.body so header backdrop-blur cannot clip it) */}
+      {/* 4. MOBILE DRAWER MENU (Rendered via Portal to document.body with max z-index so it pops up OVER everything) */}
       {isMobileMenuOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[100] flex animate-in fade-in duration-200">
-          {/* Full-screen Dark Backdrop */}
+        <div className="fixed inset-0 z-[99999] w-screen h-screen h-[100dvh] flex animate-in fade-in duration-200">
+          {/* Full-screen Dark Backdrop Overlay */}
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Close menu backdrop"
           />
 
           {/* Drawer Menu Panel */}
-          <div className="relative z-10 w-[85vw] max-w-xs bg-white shadow-2xl flex flex-col h-full max-h-screen overflow-y-auto p-5 sm:p-6 animate-in slide-in-from-left duration-300">
+          <div className="relative z-10 w-[85vw] max-w-xs sm:w-80 bg-white shadow-2xl flex flex-col h-full h-[100dvh] max-h-screen overflow-y-auto p-5 sm:p-6 animate-in slide-in-from-left duration-300">
             {/* Drawer Header */}
             <div className="flex items-center justify-between pb-4 border-b border-ivory-200 shrink-0">
               <div className="flex flex-col">
@@ -454,7 +454,7 @@ export const Navbar = () => {
 
       {/* 5. LIVE SEARCH POPUP MODAL (Rendered via Portal to document.body) */}
       {isSearchOpen && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-4 sm:pt-20 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-sm flex items-start justify-center pt-4 sm:pt-20 px-3 sm:px-4 overflow-y-auto animate-in fade-in duration-200">
           <div 
             className="fixed inset-0" 
             onClick={() => {
